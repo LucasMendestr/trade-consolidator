@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trade Consolidator - NinjaTrader Analysis</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@1.69.6"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@1.69.6/dist/module.js" type="module"></script>
     <style>
         * {
             margin: 0;
@@ -439,37 +439,23 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        // Importar Supabase via módulo
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@1.69.6/+esm';
+
         // Configuração Supabase
         const SUPABASE_URL = 'https://wswqbdjruvsfqhjkdvck.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indzd3FiZGpydXZzZnFoamtkdmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNzk4MjEsImV4cCI6MjA3ODY1NTgyMX0.-Ulf2Jf4Wf_5JMaPTzgHx5Ifg8sQqKTMW01Sofr3vMY';
 
-        let supabaseClient = null;
+        let supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         let currentUser = null;
         let currentSession = null;
         let trades = [];
 
-        // Inicializar Supabase
-        async function initSupabase() {
-            console.log('🚀 INICIALIZANDO SUPABASE');
-            
-            if (typeof supabase !== 'undefined') {
-                try {
-                    supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                    console.log('✅ Supabase client criado com sucesso');
-                    return true;
-                } catch (err) {
-                    console.error('❌ Erro ao criar Supabase client:', err);
-                    return false;
-                }
-            } else {
-                console.error('❌ Supabase biblioteca não carregou');
-                return false;
-            }
-        }
+        console.log('✅ Supabase client inicializado com sucesso!');
 
         // Mostrar mensagem
-        function showMessage(type, text) {
+        window.showMessage = function(type, text) {
             const msg = document.getElementById('authMessage');
             if (type === 'error') {
                 msg.innerHTML = `<div class="error">${text}</div>`;
@@ -482,7 +468,7 @@
         }
 
         // Alternar entre login e registro
-        function toggleForm() {
+        window.toggleForm = function() {
             document.getElementById('loginForm').style.display = 
                 document.getElementById('loginForm').style.display === 'none' ? 'block' : 'none';
             document.getElementById('registerForm').style.display = 
@@ -490,7 +476,7 @@
         }
 
         // Fazer login
-        async function handleLogin() {
+        window.handleLogin = async function() {
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
 
@@ -523,7 +509,7 @@
         }
 
         // Fazer registro
-        async function handleRegister() {
+        window.handleRegister = async function() {
             const email = document.getElementById('registerEmail').value;
             const password = document.getElementById('registerPassword').value;
 
@@ -554,7 +540,7 @@
         }
 
         // Fazer logout
-        async function handleLogout() {
+        window.handleLogout = async function() {
             try {
                 await supabaseClient.auth.signOut();
                 currentUser = null;
@@ -570,25 +556,24 @@
         }
 
         // Mostrar app
-        function showApp() {
+        window.showApp = function() {
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('appScreen').style.display = 'block';
             document.getElementById('userEmail').textContent = currentUser.email;
         }
 
         // Esconder app
-        function hideApp() {
+        window.hideApp = function() {
             document.getElementById('loginScreen').style.display = 'block';
             document.getElementById('appScreen').style.display = 'none';
         }
 
         // Upload de arquivo
-        async function handleFileUpload(event) {
+        window.handleFileUpload = async function(event) {
             const file = event.target.files[0];
             if (!file) return;
 
             console.log('📄 Arquivo selecionado:', file.name);
-            console.log('📊 Tamanho:', file.size, 'bytes');
 
             const reader = new FileReader();
             reader.onload = async (e) => {
@@ -723,7 +708,6 @@
             const calculatedTrades = [];
 
             Object.values(grouped).forEach(ops => {
-                let tradesCycle = [];
                 let currentTrade = null;
 
                 ops.forEach(op => {
@@ -902,15 +886,6 @@
                 }
             });
         }
-
-        // Inicializar ao carregar página
-        window.addEventListener('DOMContentLoaded', async () => {
-            console.log('⏳ Carregando aplicação...');
-            const ok = await initSupabase();
-            if (!ok) {
-                showMessage('error', 'Erro ao conectar com Supabase');
-            }
-        });
     </script>
 </body>
 </html>
