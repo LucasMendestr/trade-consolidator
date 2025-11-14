@@ -13,7 +13,7 @@ function initSupabase() {
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indzd3FiZGpydXZzZnFoamtkdmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNzk4MjEsImV4cCI6MjA3ODY1NTgyMX0.-Ulf2Jf4Wf_5JMaPTzgHx5Ifg8sQqKTMW01Sofr3vMY';
         
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        console.log('✅ Supabase inicializado com sucesso!');
+        console.log('✅ Supabase inicializado!');
         return true;
     } else {
         console.error('❌ Supabase não carregou');
@@ -21,7 +21,6 @@ function initSupabase() {
     }
 }
 
-// Mostrar mensagem
 function showMessage(type, text) {
     const msg = document.getElementById('authMessage');
     if (type === 'error') {
@@ -32,7 +31,6 @@ function showMessage(type, text) {
     setTimeout(() => { msg.innerHTML = ''; }, 5000);
 }
 
-// Alternar form
 function toggleForm() {
     document.getElementById('loginForm').style.display = 
         document.getElementById('loginForm').style.display === 'none' ? 'block' : 'none';
@@ -40,10 +38,9 @@ function toggleForm() {
         document.getElementById('registerForm').style.display === 'none' ? 'block' : 'none';
 }
 
-// Login - API CORRIGIDA
 async function handleLogin() {
     if (!supabaseClient) {
-        showMessage('error', 'Supabase não foi inicializado');
+        showMessage('error', 'Supabase não inicializado');
         return;
     }
 
@@ -56,36 +53,24 @@ async function handleLogin() {
     }
 
     try {
-        console.log('🔐 Tentando login com:', email);
-        
-        // NOVA API SUPABASE
-        const { data, error } = await supabaseClient.auth.signInWithPassword({
-            email: email,
-            password: password
-        });
-        
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
         if (error) throw error;
 
         currentUser = data.user;
         currentSession = data.session;
 
-        console.log('✅ Login realizado!');
-        console.log('📧 Email:', currentUser.email);
-        console.log('🆔 User ID:', currentUser.id);
-        
+        console.log('✅ Login OK:', currentUser.email);
         showApp();
         await loadDataFromSupabase();
         
     } catch (err) {
-        console.error('❌ Erro:', err.message);
         showMessage('error', err.message);
     }
 }
 
-// Register - API CORRIGIDA
 async function handleRegister() {
     if (!supabaseClient) {
-        showMessage('error', 'Supabase não foi inicializado');
+        showMessage('error', 'Supabase não inicializado');
         return;
     }
 
@@ -93,70 +78,49 @@ async function handleRegister() {
     const password = document.getElementById('registerPassword').value;
 
     if (!email || password.length < 6) {
-        showMessage('error', 'Email e senha (mín 6 chars) obrigatórios');
+        showMessage('error', 'Email e senha (mín 6) obrigatórios');
         return;
     }
 
     try {
-        console.log('📝 Registrando novo usuário:', email);
-        
-        // NOVA API SUPABASE
-        const { data, error } = await supabaseClient.auth.signUp({
-            email: email,
-            password: password
-        });
-        
+        const { data, error } = await supabaseClient.auth.signUp({ email, password });
         if (error) throw error;
 
-        console.log('✅ Conta criada com sucesso!');
-        showMessage('success', 'Conta criada! Faça login para continuar.');
+        showMessage('success', 'Conta criada! Faça login.');
         toggleForm();
         
     } catch (err) {
-        console.error('❌ Erro:', err.message);
         showMessage('error', err.message);
     }
 }
 
-// Logout
 async function handleLogout() {
     try {
         await supabaseClient.auth.signOut();
         currentUser = null;
-        currentSession = null;
         trades = [];
-        document.getElementById('loginEmail').value = '';
-        document.getElementById('loginPassword').value = '';
         document.getElementById('loginScreen').style.display = 'block';
         document.getElementById('appScreen').style.display = 'none';
-        console.log('✅ Logout realizado');
     } catch (err) {
-        console.error('❌ Erro logout:', err);
+        console.error('Erro logout:', err);
     }
 }
 
-// Mostrar app - CORRIGIDO
 function showApp() {
-    console.log('📱 Mostrando app...');
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('appScreen').style.display = 'block';
     document.getElementById('userEmail').textContent = currentUser.email;
-    console.log('✅ App visível');
 }
 
-// Upload CSV
 async function handleFileUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
-
-    console.log('📄 Arquivo selecionado:', file.name);
 
     const reader = new FileReader();
     reader.onload = async (e) => {
         try {
             await processCSV(e.target.result);
         } catch (err) {
-            console.error('❌ Erro ao processar arquivo:', err);
             document.getElementById('uploadMessage').innerHTML = 
                 `<div class="error">Erro: ${err.message}</div>`;
         }
@@ -164,7 +128,6 @@ async function handleFileUpload(event) {
     reader.readAsText(file);
 }
 
-// Processar CSV
 async function processCSV(csv) {
     console.log('🔄 Processando CSV...');
     
@@ -223,27 +186,25 @@ async function processCSV(csv) {
 
             if (error) {
                 errors++;
-                console.error(`Erro na linha ${i}:`, error.message);
             } else {
                 imported++;
             }
 
         } catch (err) {
             errors++;
-            console.error(`Erro ao processar linha ${i}:`, err.message);
         }
     }
 
+    console.log(`✅ ${imported} importadas`);
     document.getElementById('uploadMessage').innerHTML = 
-        `<div class="success">✅ ${imported} importadas, ${duplicates} duplicatas, ${errors} erros</div>`;
+        `<div class="success">✅ ${imported} importadas, ${duplicates} duplicatas</div>`;
 
     await loadDataFromSupabase();
 }
 
-// Carregar dados
 async function loadDataFromSupabase() {
     try {
-        console.log('📥 Carregando dados...');
+        console.log('📥 Carregando operações...');
 
         const { data: operations } = await supabaseClient
             .from('operations')
@@ -252,87 +213,95 @@ async function loadDataFromSupabase() {
             .order('time');
 
         if (operations && operations.length > 0) {
-            console.log(`📊 ${operations.length} operações carregadas`);
-            trades = calculateTrades(operations);
-            updateDashboard();
-        } else {
-            console.log('ℹ️ Nenhuma operação encontrada');
+            console.log(`📊 ${operations.length} operações`);
+            calculateAndDisplayTrades(operations);
         }
     } catch (err) {
         console.error('❌ Erro:', err);
     }
 }
 
-// Calcular trades
-function calculateTrades(operations) {
-    const grouped = {};
+function calculateAndDisplayTrades(operations) {
+    console.log('🔄 Calculando trades...');
     
+    // Agrupar por instrumento
+    const grouped = {};
     operations.forEach(op => {
-        const key = `${op.instrument}-${op.account}`;
+        const key = op.instrument;
         if (!grouped[key]) grouped[key] = [];
         grouped[key].push(op);
     });
 
-    const calculatedTrades = [];
+    trades = [];
 
-    Object.values(grouped).forEach(ops => {
-        let currentTrade = null;
+    // Processar cada grupo de operações
+    Object.entries(grouped).forEach(([instrument, ops]) => {
+        let tradeOpen = null;
 
         ops.forEach(op => {
-            if (!currentTrade) {
-                currentTrade = {
-                    instrument: op.instrument,
-                    account: op.account,
-                    type: op.action === 'Buy' ? 'LONG' : 'SHORT',
-                    entries: [op],
-                    exits: [],
-                    startTime: op.time
-                };
+            if (!tradeOpen) {
+                // Abrir novo trade
+                if (op.e_x === 'Entry') {
+                    tradeOpen = {
+                        instrument: op.instrument,
+                        type: op.action === 'Buy' ? 'LONG' : 'SHORT',
+                        entries: [op],
+                        exits: [],
+                        account: op.account,
+                        startTime: op.time,
+                        status: 'Open'
+                    };
+                }
             } else {
                 if (op.e_x === 'Entry') {
-                    currentTrade.entries.push(op);
+                    // Adicionar mais entry
+                    tradeOpen.entries.push(op);
                 } else {
-                    currentTrade.exits.push(op);
+                    // Adicionar exit
+                    tradeOpen.exits.push(op);
 
-                    const entryQty = currentTrade.entries.reduce((s, e) => s + parseFloat(e.quantity || 0), 0);
-                    const exitQty = currentTrade.exits.reduce((s, e) => s + parseFloat(e.quantity || 0), 0);
+                    // Calcular se trade fechou
+                    const entryQty = tradeOpen.entries.reduce((s, e) => s + parseFloat(e.quantity || 0), 0);
+                    const exitQty = tradeOpen.exits.reduce((s, e) => s + parseFloat(e.quantity || 0), 0);
 
-                    if (entryQty === exitQty) {
-                        currentTrade.status = 'Closed';
-                        const avgEntry = currentTrade.entries.reduce((s, e) => 
+                    if (entryQty <= exitQty) {
+                        // Trade fechou
+                        const avgEntry = tradeOpen.entries.reduce((s, e) => 
                             s + (parseFloat(e.price) * parseFloat(e.quantity)), 0) / entryQty;
-                        const avgExit = currentTrade.exits.reduce((s, e) => 
+                        const avgExit = tradeOpen.exits.reduce((s, e) => 
                             s + (parseFloat(e.price) * parseFloat(e.quantity)), 0) / exitQty;
 
                         const pointsDiff = avgExit - avgEntry;
-                        const totalComm = [...currentTrade.entries, ...currentTrade.exits]
+                        const totalComm = [...tradeOpen.entries, ...tradeOpen.exits]
                             .reduce((s, o) => s + parseFloat(o.commission || 0), 0);
 
-                        const mult = { 'NQ': 20, 'MNQ': 2, 'GC': 100, 'MGC': 10 }[currentTrade.instrument.substring(0, 3)] || 10;
+                        const mult = { 'NQ': 20, 'MNQ': 2, 'GC': 100, 'MGC': 10 }[instrument.substring(0, 3)] || 10;
                         const pnlDollars = (pointsDiff * entryQty * mult) - totalComm;
 
-                        currentTrade.avgEntry = avgEntry.toFixed(2);
-                        currentTrade.avgExit = avgExit.toFixed(2);
-                        currentTrade.pnlPoints = (pointsDiff * entryQty).toFixed(2);
-                        currentTrade.pnlDollars = pnlDollars.toFixed(2);
+                        tradeOpen.status = 'Closed';
+                        tradeOpen.avgEntry = avgEntry.toFixed(2);
+                        tradeOpen.avgExit = avgExit.toFixed(2);
+                        tradeOpen.pnlPoints = (pointsDiff * entryQty).toFixed(2);
+                        tradeOpen.pnlDollars = pnlDollars.toFixed(2);
+                        tradeOpen.endTime = op.time;
 
-                        calculatedTrades.push(currentTrade);
-                        currentTrade = null;
+                        trades.push(tradeOpen);
+                        tradeOpen = null;
                     }
                 }
             }
         });
 
-        if (currentTrade) {
-            currentTrade.status = 'Open';
-            calculatedTrades.push(currentTrade);
+        // Se sobrou trade aberto
+        if (tradeOpen) {
+            trades.push(tradeOpen);
         }
     });
 
-    return calculatedTrades;
+    console.log(`📈 ${trades.length} trades calculados`);
+    updateDashboard();
 }
 
-// Atualizar dashboard
 function updateDashboard() {
     const stats = {
         totalTrades: trades.filter(t => t.status === 'Closed').length,
@@ -343,83 +312,30 @@ function updateDashboard() {
     };
 
     document.getElementById('statsGrid').innerHTML = `
-        <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value">${stats.totalTrades}</div></div>
+        <div class="stat-card"><div class="stat-label">Trades Fechados</div><div class="stat-value">${stats.totalTrades}</div></div>
         <div class="stat-card"><div class="stat-label">Abertos</div><div class="stat-value">${stats.openTrades}</div></div>
-        <div class="stat-card ${stats.totalPnL >= 0 ? 'success' : 'danger'}"><div class="stat-label">PnL Total</div><div class="stat-value">$${stats.totalPnL.toFixed(2)}</div></div>
-        <div class="stat-card success"><div class="stat-label">Positivos</div><div class="stat-value">${stats.wins}</div></div>
-        <div class="stat-card danger"><div class="stat-label">Negativos</div><div class="stat-value">${stats.losses}</div></div>
+        <div class="stat-card"><div class="stat-label">PnL Total</div><div class="stat-value">$${stats.totalPnL.toFixed(2)}</div></div>
+        <div class="stat-card"><div class="stat-label">Wins</div><div class="stat-value">${stats.wins}</div></div>
+        <div class="stat-card"><div class="stat-label">Losses</div><div class="stat-value">${stats.losses}</div></div>
     `;
 
     let tableHtml = '';
     trades.forEach(t => {
         tableHtml += `
             <tr>
-                <td><span class="status-badge status-${t.status.toLowerCase()}">${t.status}</span></td>
+                <td>${t.status}</td>
                 <td>${t.instrument}</td>
                 <td>${t.type}</td>
-                <td>${t.avgEntry}</td>
+                <td>${t.avgEntry || '-'}</td>
                 <td>${t.avgExit || '-'}</td>
-                <td>${t.pnlPoints || '-'}</td>
-                <td class="${parseFloat(t.pnlDollars || 0) >= 0 ? 'pnl-positive' : 'pnl-negative'}">$${t.pnlDollars || '-'}</td>
+                <td style="color: ${parseFloat(t.pnlDollars || 0) >= 0 ? 'green' : 'red'}">$${t.pnlDollars || '-'}</td>
             </tr>
         `;
     });
 
-    document.getElementById('tradesBody').innerHTML = tableHtml || '<tr><td colspan="7" class="loading">Nenhum trade</td></tr>';
-
-    if (trades.length > 0) {
-        updateCharts();
-    }
+    document.getElementById('tradesBody').innerHTML = tableHtml || '<tr><td colspan="6">Nenhum trade</td></tr>';
 }
 
-// Gráficos
-function updateCharts() {
-    // Gráfico de linha
-    new Chart(document.getElementById('pnlChart'), {
-        type: 'line',
-        data: {
-            labels: trades.map((_, i) => `Trade ${i + 1}`),
-            datasets: [{
-                label: 'PnL',
-                data: trades.map(t => parseFloat(t.pnlDollars || 0)),
-                borderColor: '#2196F3',
-                backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                tension: 0.4,
-                fill: true
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: true } }
-        }
-    });
-
-    // Gráfico por instrumento
-    const byInstrument = {};
-    trades.forEach(t => {
-        byInstrument[t.instrument] = (byInstrument[t.instrument] || 0) + parseFloat(t.pnlDollars || 0);
-    });
-
-    new Chart(document.getElementById('instrumentChart'), {
-        type: 'bar',
-        data: {
-            labels: Object.keys(byInstrument),
-            datasets: [{
-                label: 'PnL',
-                data: Object.values(byInstrument),
-                backgroundColor: Object.values(byInstrument).map(v => v >= 0 ? '#4CAF50' : '#f44336')
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
-}
-
-// Inicializar quando página carregar
 window.addEventListener('load', () => {
-    console.log('🚀 Página carregada, inicializando...');
     initSupabase();
 });
