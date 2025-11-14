@@ -3,37 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trade Consolidator</title>
+    <title>Trade Consolidator Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #667eea; min-height: 100vh; }
+        
         .login-container { background: white; padding: 40px; max-width: 400px; margin: 50px auto; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
         .login-container h1 { text-align: center; margin-bottom: 20px; }
         .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
         .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
-        .btn { width: 100%; padding: 10px; margin: 10px 0; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        .btn-primary { background: #2196F3; color: white; }
-        .btn-secondary { background: #f0f0f0; }
+        
+        .btn { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-primary { background: #2196F3; color: white; width: 100%; margin: 10px 0; }
+        .btn-primary:hover { background: #1976D2; }
+        .btn-secondary { background: #f0f0f0; width: 100%; margin: 10px 0; }
+        .btn-secondary:hover { background: #e0e0e0; }
+        
         .error { background: #ffebee; color: #f44336; padding: 10px; border-radius: 4px; margin: 10px 0; }
         .success { background: #e8f5e9; color: #4CAF50; padding: 10px; border-radius: 4px; margin: 10px 0; }
         
-        .app-container { background: white; padding: 30px; max-width: 1200px; margin: 20px auto; border-radius: 8px; }
-        .app-container h1 { margin-bottom: 20px; }
-        .upload-area { border: 2px dashed #2196F3; padding: 40px; text-align: center; border-radius: 8px; cursor: pointer; background: #f0f7ff; margin: 20px 0; }
-        .upload-area:hover { background: #e3f2fd; }
-        .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin: 20px 0; }
-        .stat-card { background: #f5f5f5; padding: 15px; border-radius: 4px; text-align: center; }
-        .stat-label { font-size: 12px; color: #666; text-transform: uppercase; }
-        .stat-value { font-size: 24px; font-weight: bold; margin-top: 10px; }
+        .app-container { background: white; padding: 30px; max-width: 1400px; margin: 20px auto; border-radius: 8px; }
+        .app-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ddd; padding-bottom: 20px; margin-bottom: 20px; }
+        .app-header h1 { font-size: 28px; }
+        .user-section { text-align: right; }
+        .user-section p { margin: 5px 0; color: #666; }
+        
+        .upload-section { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .upload-area { border: 2px dashed #2196F3; padding: 40px; text-align: center; border-radius: 8px; cursor: pointer; background: #f0f7ff; margin: 10px 0; transition: 0.3s; }
+        .upload-area:hover { background: #e3f2fd; border-color: #1976D2; }
+        .upload-area p { color: #333; margin: 5px 0; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 20px 0; }
+        .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; }
+        .stat-label { font-size: 12px; text-transform: uppercase; opacity: 0.9; }
+        .stat-value { font-size: 28px; font-weight: bold; margin-top: 10px; }
+        
+        .filter-section { background: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0; }
+        .filter-section label { font-weight: bold; display: block; margin-bottom: 10px; }
+        select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        table th, table td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
-        table th { background: #f5f5f5; font-weight: bold; }
+        table th { background: #f5f5f5; padding: 15px; text-align: left; font-weight: bold; border-bottom: 2px solid #ddd; }
+        table td { padding: 15px; border-bottom: 1px solid #ddd; }
+        table tbody tr:hover { background: #f9f9f9; cursor: pointer; }
+        table tbody tr { transition: 0.2s; }
+        
+        .status-closed { background: #e8f5e9; color: #2e7d32; padding: 5px 10px; border-radius: 4px; }
+        .status-open { background: #fff3e0; color: #e65100; padding: 5px 10px; border-radius: 4px; }
+        .pnl-positive { color: #2e7d32; font-weight: bold; }
+        .pnl-negative { color: #c62828; font-weight: bold; }
+        
+        #tradeDetails { display: none; margin-top: 30px; background: #f9f9f9; padding: 20px; border-radius: 8px; border-left: 5px solid #2196F3; }
+        .detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .close-btn { background: #f44336; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; }
+        .close-btn:hover { background: #d32f2f; }
+        
+        .detail-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 20px 0; }
+        .detail-item { background: white; padding: 15px; border-radius: 4px; }
+        .detail-item strong { display: block; font-size: 12px; color: #666; text-transform: uppercase; margin-bottom: 5px; }
+        .detail-item span { font-size: 18px; font-weight: bold; color: #2196F3; }
         
         #appScreen { display: none; }
         #loginScreen { display: block; }
+        
+        .loading { text-align: center; padding: 20px; color: #666; }
+        h2 { margin: 20px 0 15px 0; font-size: 20px; color: #333; }
+        h3 { margin: 15px 0 10px 0; font-size: 16px; color: #333; }
     </style>
 </head>
 <body>
@@ -65,7 +103,7 @@
                 </div>
                 <div class="form-group">
                     <label>Senha:</label>
-                    <input type="password" id="registerPassword" placeholder="Senha">
+                    <input type="password" id="registerPassword" placeholder="Mínimo 6 caracteres">
                 </div>
                 <button class="btn btn-primary" onclick="handleRegister()">Registrar</button>
                 <button class="btn btn-secondary" onclick="toggleForm()">Voltar</button>
@@ -76,42 +114,118 @@
     <!-- APP -->
     <div id="appScreen">
         <div class="app-container">
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ddd; padding-bottom: 20px;">
-                <h1>📊 Trade Consolidator</h1>
-                <div>
-                    <p>Email: <span id="userEmail"></span></p>
-                    <button class="btn btn-secondary" onclick="handleLogout()" style="width: 120px;">Sair</button>
+            <!-- HEADER -->
+            <div class="app-header">
+                <h1>📊 Trade Consolidator Pro</h1>
+                <div class="user-section">
+                    <p>Email: <strong id="userEmail"></strong></p>
+                    <button class="btn btn-secondary" onclick="handleLogout()" style="width: 150px; margin-top: 10px;">Sair</button>
                 </div>
             </div>
 
-            <h2>📤 Importar CSV</h2>
-            <div class="upload-area" onclick="document.getElementById('csvFile').click()">
-                <p>📁 Clique aqui para selecionar CSV</p>
-                <p style="font-size: 12px; color: #999;">NinjaTrader Export</p>
+            <!-- UPLOAD -->
+            <div class="upload-section">
+                <h3>📤 Importar CSV</h3>
+                <div class="upload-area" onclick="document.getElementById('csvFile').click()">
+                    <p>📁 Clique para selecionar arquivo CSV</p>
+                    <p style="font-size: 12px; color: #999;">NinjaTrader Export</p>
+                </div>
+                <input type="file" id="csvFile" accept=".csv" onchange="handleFileUpload(event)" style="display: none;">
+                <div id="uploadMessage"></div>
             </div>
-            <input type="file" id="csvFile" accept=".csv" onchange="handleFileUpload(event)" style="display: none;">
-            <div id="uploadMessage"></div>
 
+            <!-- STATS -->
             <h2>📈 Estatísticas</h2>
             <div class="stats-grid" id="statsGrid"></div>
 
-            <h2>📋 Trades</h2>
+            <!-- FILTRO -->
+            <div class="filter-section">
+                <label>🏦 Filtrar por Conta:</label>
+                <select id="accountFilter" onchange="filterTrades()">
+                    <option value="">Todas as contas</option>
+                </select>
+            </div>
+
+            <!-- TRADES TABLE -->
+            <h2>📋 Trades (Clique em um trade para ver detalhes)</h2>
             <div style="overflow-x: auto;">
                 <table id="tradesTable">
                     <thead>
                         <tr>
                             <th>Status</th>
+                            <th>Conta</th>
                             <th>Instrumento</th>
                             <th>Tipo</th>
                             <th>Entrada</th>
                             <th>Saída</th>
-                            <th>PnL</th>
+                            <th>Pontos</th>
+                            <th>PnL $</th>
                         </tr>
                     </thead>
                     <tbody id="tradesBody">
-                        <tr><td colspan="6">Nenhum trade</td></tr>
+                        <tr><td colspan="8" class="loading">Nenhum trade</td></tr>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- TRADE DETAILS -->
+            <div id="tradeDetails">
+                <div class="detail-header">
+                    <h2>📊 Detalhes do Trade</h2>
+                    <button class="close-btn" onclick="closeTradeDetails()">✕ Fechar</button>
+                </div>
+                
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <strong>Instrumento</strong>
+                        <span id="detailInstrument">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <strong>Tipo</strong>
+                        <span id="detailType">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <strong>Status</strong>
+                        <span id="detailStatus">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <strong>Conta</strong>
+                        <span id="detailAccount">-</span>
+                    </div>
+                </div>
+
+                <h3>📈 Operações do Trade</h3>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Hora</th>
+                                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Ação</th>
+                                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Quantidade</th>
+                                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Preço</th>
+                                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Comissão</th>
+                                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Tipo</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detailOperations">
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="margin-top: 20px; padding: 20px; background: white; border-radius: 4px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                    <div style="border-left: 4px solid #2196F3; padding-left: 15px;">
+                        <strong style="display: block; font-size: 12px; color: #666; margin-bottom: 8px;">Preço Médio Entrada</strong>
+                        <div style="font-size: 22px; color: #2196F3; font-weight: bold;">$<span id="detailAvgEntry">-</span></div>
+                    </div>
+                    <div style="border-left: 4px solid #2196F3; padding-left: 15px;">
+                        <strong style="display: block; font-size: 12px; color: #666; margin-bottom: 8px;">Preço Médio Saída</strong>
+                        <div style="font-size: 22px; color: #2196F3; font-weight: bold;">$<span id="detailAvgExit">-</span></div>
+                    </div>
+                    <div style="border-left: 4px solid #4CAF50; padding-left: 15px;">
+                        <strong style="display: block; font-size: 12px; color: #666; margin-bottom: 8px;">PnL Total</strong>
+                        <div id="detailPnL" style="font-size: 22px; font-weight: bold;">-</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
