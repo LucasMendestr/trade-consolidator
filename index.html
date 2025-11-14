@@ -3,431 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trade Consolidator - NinjaTrader Analysis</title>
+    <title>Trade Consolidator</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        :root {
-            --primary: #2196F3;
-            --success: #4CAF50;
-            --danger: #f44336;
-            --warning: #ff9800;
-            --dark: #1f2937;
-            --light: #f3f4f6;
-            --border: #e5e7eb;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .container {
-            max-width: 1200px;
-            width: 100%;
-            margin: 20px;
-        }
-
-        .login-container {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            padding: 40px;
-            max-width: 400px;
-            margin: 0 auto;
-        }
-
-        .login-container h1 {
-            text-align: center;
-            margin-bottom: 30px;
-            color: var(--dark);
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: var(--dark);
-            font-weight: 500;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            font-size: 14px;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
-        }
-
-        .btn {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-            margin-bottom: 10px;
-        }
-
-        .btn-primary:hover {
-            background: #1976D2;
-        }
-
-        .btn-secondary {
-            background: var(--light);
-            color: var(--dark);
-            border: 1px solid var(--border);
-        }
-
-        .btn-secondary:hover {
-            background: #e5e7eb;
-        }
-
-        .error {
-            background: #ffebee;
-            color: var(--danger);
-            padding: 12px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            font-size: 14px;
-        }
-
-        .success {
-            background: #e8f5e9;
-            color: var(--success);
-            padding: 12px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            font-size: 14px;
-        }
-
-        .app-container {
-            display: none;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            padding: 30px;
-        }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            border-bottom: 2px solid var(--border);
-            padding-bottom: 20px;
-        }
-
-        .header h1 {
-            color: var(--dark);
-        }
-
-        .user-info {
-            text-align: right;
-        }
-
-        .user-info p {
-            color: #666;
-            font-size: 14px;
-        }
-
-        .logout-btn {
-            background: var(--danger);
-            color: white;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            margin-top: 10px;
-        }
-
-        .section {
-            margin-bottom: 40px;
-        }
-
-        .section h2 {
-            color: var(--dark);
-            margin-bottom: 20px;
-            font-size: 20px;
-        }
-
-        .upload-area {
-            border: 2px dashed var(--primary);
-            border-radius: 8px;
-            padding: 40px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            background: #f0f7ff;
-        }
-
-        .upload-area:hover {
-            border-color: #1976D2;
-            background: #e3f2fd;
-        }
-
-        .upload-area p {
-            color: var(--dark);
-            margin-bottom: 10px;
-        }
-
-        #csvFile {
-            display: none;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background: var(--light);
-            padding: 20px;
-            border-radius: 8px;
-            border-left: 4px solid var(--primary);
-        }
-
-        .stat-card.success {
-            border-left-color: var(--success);
-        }
-
-        .stat-card.danger {
-            border-left-color: var(--danger);
-        }
-
-        .stat-label {
-            color: #666;
-            font-size: 12px;
-            text-transform: uppercase;
-            margin-bottom: 8px;
-        }
-
-        .stat-value {
-            font-size: 24px;
-            font-weight: bold;
-            color: var(--dark);
-        }
-
-        .table-container {
-            overflow-x: auto;
-            margin-top: 20px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-        }
-
-        table thead {
-            background: var(--light);
-        }
-
-        table th, table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid var(--border);
-        }
-
-        table th {
-            font-weight: 600;
-            color: var(--dark);
-        }
-
-        table tr:hover {
-            background: #f9fafb;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .status-closed {
-            background: #e8f5e9;
-            color: var(--success);
-        }
-
-        .status-open {
-            background: #fff3e0;
-            color: var(--warning);
-        }
-
-        .pnl-positive {
-            color: var(--success);
-            font-weight: 600;
-        }
-
-        .pnl-negative {
-            color: var(--danger);
-            font-weight: 600;
-        }
-
-        .chart-container {
-            position: relative;
-            height: 300px;
-            margin-bottom: 30px;
-            background: var(--light);
-            padding: 20px;
-            border-radius: 8px;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: #666;
-        }
-
-        @media (max-width: 768px) {
-            .login-container {
-                padding: 20px;
-            }
-
-            .app-container {
-                padding: 15px;
-            }
-
-            .header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .user-info {
-                text-align: left;
-                margin-top: 10px;
-            }
-
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #667eea; min-height: 100vh; }
+        .login-container { background: white; padding: 40px; max-width: 400px; margin: 50px auto; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+        .login-container h1 { text-align: center; margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        .btn { width: 100%; padding: 10px; margin: 10px 0; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-primary { background: #2196F3; color: white; }
+        .btn-secondary { background: #f0f0f0; }
+        .error { background: #ffebee; color: #f44336; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .success { background: #e8f5e9; color: #4CAF50; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        
+        .app-container { background: white; padding: 30px; max-width: 1200px; margin: 20px auto; border-radius: 8px; }
+        .app-container h1 { margin-bottom: 20px; }
+        .upload-area { border: 2px dashed #2196F3; padding: 40px; text-align: center; border-radius: 8px; cursor: pointer; background: #f0f7ff; margin: 20px 0; }
+        .upload-area:hover { background: #e3f2fd; }
+        .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin: 20px 0; }
+        .stat-card { background: #f5f5f5; padding: 15px; border-radius: 4px; text-align: center; }
+        .stat-label { font-size: 12px; color: #666; text-transform: uppercase; }
+        .stat-value { font-size: 24px; font-weight: bold; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        table th, table td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        table th { background: #f5f5f5; font-weight: bold; }
+        
+        #appScreen { display: none; }
+        #loginScreen { display: block; }
     </style>
 </head>
 <body>
-    <!-- LOGIN SCREEN -->
-    <div id="loginScreen" class="login-container">
-        <h1>📊 Trade Consolidator</h1>
-        
-        <div id="authMessage"></div>
-
-        <div id="loginForm">
-            <div class="form-group">
-                <label>Email</label>
-                <input type="email" id="loginEmail" placeholder="seu@email.com">
+    <!-- LOGIN -->
+    <div id="loginScreen">
+        <div class="login-container">
+            <h1>📊 Trade Consolidator</h1>
+            <div id="authMessage"></div>
+            
+            <div id="loginForm">
+                <h3>Login</h3>
+                <div class="form-group">
+                    <label>Email:</label>
+                    <input type="email" id="loginEmail" placeholder="seu@email.com">
+                </div>
+                <div class="form-group">
+                    <label>Senha:</label>
+                    <input type="password" id="loginPassword" placeholder="Senha">
+                </div>
+                <button class="btn btn-primary" onclick="handleLogin()">Entrar</button>
+                <button class="btn btn-secondary" onclick="toggleForm()">Criar Conta</button>
             </div>
-            <div class="form-group">
-                <label>Senha</label>
-                <input type="password" id="loginPassword" placeholder="Sua senha">
+            
+            <div id="registerForm" style="display: none;">
+                <h3>Registrar</h3>
+                <div class="form-group">
+                    <label>Email:</label>
+                    <input type="email" id="registerEmail" placeholder="seu@email.com">
+                </div>
+                <div class="form-group">
+                    <label>Senha:</label>
+                    <input type="password" id="registerPassword" placeholder="Senha">
+                </div>
+                <button class="btn btn-primary" onclick="handleRegister()">Registrar</button>
+                <button class="btn btn-secondary" onclick="toggleForm()">Voltar</button>
             </div>
-            <button class="btn btn-primary" onclick="handleLogin()">Entrar</button>
-            <button class="btn btn-secondary" onclick="toggleForm()">Criar Conta</button>
-        </div>
-
-        <div id="registerForm" style="display: none;">
-            <div class="form-group">
-                <label>Email</label>
-                <input type="email" id="registerEmail" placeholder="seu@email.com">
-            </div>
-            <div class="form-group">
-                <label>Senha</label>
-                <input type="password" id="registerPassword" placeholder="Mínimo 6 caracteres">
-            </div>
-            <button class="btn btn-primary" onclick="handleRegister()">Registrar</button>
-            <button class="btn btn-secondary" onclick="toggleForm()">Voltar ao Login</button>
         </div>
     </div>
 
-    <!-- APP SCREEN -->
-    <div id="appScreen" class="container" style="display: none;">
+    <!-- APP -->
+    <div id="appScreen">
         <div class="app-container">
-            <div class="header">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ddd; padding-bottom: 20px;">
+                <h1>📊 Trade Consolidator</h1>
                 <div>
-                    <h1>📊 Trade Consolidator</h1>
-                </div>
-                <div class="user-info">
-                    <p>Bem-vindo!</p>
-                    <p id="userEmail" style="font-weight: bold;"></p>
-                    <button class="logout-btn" onclick="handleLogout()">Sair</button>
+                    <p>Email: <span id="userEmail"></span></p>
+                    <button class="btn btn-secondary" onclick="handleLogout()" style="width: 120px;">Sair</button>
                 </div>
             </div>
 
-            <div class="section">
-                <h2>📤 Importar Dados</h2>
-                <div class="upload-area" onclick="document.getElementById('csvFile').click()">
-                    <p>📁 Clique para selecionar ou arraste um arquivo CSV</p>
-                    <p style="font-size: 12px; color: #999;">Formato: NinjaTrader Export</p>
-                </div>
-                <input type="file" id="csvFile" accept=".csv" onchange="handleFileUpload(event)">
-                <div id="uploadMessage" style="margin-top: 15px;"></div>
+            <h2>📤 Importar CSV</h2>
+            <div class="upload-area" onclick="document.getElementById('csvFile').click()">
+                <p>📁 Clique aqui para selecionar CSV</p>
+                <p style="font-size: 12px; color: #999;">NinjaTrader Export</p>
             </div>
+            <input type="file" id="csvFile" accept=".csv" onchange="handleFileUpload(event)" style="display: none;">
+            <div id="uploadMessage"></div>
 
-            <div class="section">
-                <h2>📈 Estatísticas</h2>
-                <div class="stats-grid" id="statsGrid"></div>
-            </div>
+            <h2>📈 Estatísticas</h2>
+            <div class="stats-grid" id="statsGrid"></div>
 
-            <div class="section">
-                <h2>📊 Gráficos</h2>
-                <div class="chart-container">
-                    <canvas id="pnlChart"></canvas>
-                </div>
-                <div class="chart-container">
-                    <canvas id="instrumentChart"></canvas>
-                </div>
-            </div>
-
-            <div class="section">
-                <h2>📋 Trades Consolidados</h2>
-                <div class="table-container">
-                    <table id="tradesTable">
-                        <thead>
-                            <tr>
-                                <th>Status</th>
-                                <th>Instrumento</th>
-                                <th>Tipo</th>
-                                <th>Entrada</th>
-                                <th>Saída</th>
-                                <th>PnL Pontos</th>
-                                <th>PnL $</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tradesBody">
-                            <tr><td colspan="7" class="loading">Nenhum trade importado</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+            <h2>📋 Trades</h2>
+            <div style="overflow-x: auto;">
+                <table id="tradesTable">
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Instrumento</th>
+                            <th>Tipo</th>
+                            <th>Entrada</th>
+                            <th>Saída</th>
+                            <th>PnL</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tradesBody">
+                        <tr><td colspan="6">Nenhum trade</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
