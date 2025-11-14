@@ -135,11 +135,13 @@ async function handleLogout() {
     }
 }
 
-// Mostrar app
+// Mostrar app - CORRIGIDO
 function showApp() {
+    console.log('📱 Mostrando app...');
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('appScreen').style.display = 'block';
     document.getElementById('userEmail').textContent = currentUser.email;
+    console.log('✅ App visível');
 }
 
 // Upload CSV
