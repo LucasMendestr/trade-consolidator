@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trade Consolidator - NinjaTrader Analysis</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@1.69.6/dist/module.js" type="module"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <style>
         * {
             margin: 0;
@@ -399,7 +399,7 @@
             <div class="section">
                 <h2>📈 Estatísticas</h2>
                 <div class="stats-grid" id="statsGrid">
-                    <!-- Stats serão preenchidas aqui -->
+                    <!-- Stats aqui -->
                 </div>
             </div>
 
@@ -431,7 +431,7 @@
                             </tr>
                         </thead>
                         <tbody id="tradesBody">
-                            <tr><td colspan="7" class="loading">Nenhum trade importado ainda</td></tr>
+                            <tr><td colspan="7" class="loading">Nenhum trade importado</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -439,151 +439,142 @@
         </div>
     </div>
 
-    <script type="module">
-        // Importar Supabase via módulo
-        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@1.69.6/+esm';
-
-        // Configuração Supabase
-        const SUPABASE_URL = 'https://wswqbdjruvsfqhjkdvck.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indzd3FiZGpydXZzZnFoamtkdmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNzk4MjEsImV4cCI6MjA3ODY1NTgyMX0.-Ulf2Jf4Wf_5JMaPTzgHx5Ifg8sQqKTMW01Sofr3vMY';
-
-        let supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    <script>
+        // Variáveis globais
+        let supabaseClient = null;
         let currentUser = null;
         let currentSession = null;
         let trades = [];
 
-        console.log('✅ Supabase client inicializado com sucesso!');
+        // Inicializar Supabase
+        function initSupabase() {
+            console.log('⏳ Inicializando Supabase...');
+            
+            // Aguardar biblioteca carregar
+            if (window.supabase) {
+                const SUPABASE_URL = 'https://wswqbdjruvsfqhjkdvck.supabase.co';
+                const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indzd3FiZGpydXZzZnFoamtkdmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNzk4MjEsImV4cCI6MjA3ODY1NTgyMX0.-Ulf2Jf4Wf_5JMaPTzgHx5Ifg8sQqKTMW01Sofr3vMY';
+                
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                console.log('✅ Supabase inicializado com sucesso!');
+                return true;
+            } else {
+                console.error('❌ Supabase não carregou');
+                return false;
+            }
+        }
 
         // Mostrar mensagem
-        window.showMessage = function(type, text) {
+        function showMessage(type, text) {
             const msg = document.getElementById('authMessage');
             if (type === 'error') {
                 msg.innerHTML = `<div class="error">${text}</div>`;
             } else {
                 msg.innerHTML = `<div class="success">${text}</div>`;
             }
-            setTimeout(() => {
-                msg.innerHTML = '';
-            }, 5000);
+            setTimeout(() => { msg.innerHTML = ''; }, 5000);
         }
 
-        // Alternar entre login e registro
-        window.toggleForm = function() {
+        // Alternar form
+        function toggleForm() {
             document.getElementById('loginForm').style.display = 
                 document.getElementById('loginForm').style.display === 'none' ? 'block' : 'none';
             document.getElementById('registerForm').style.display = 
                 document.getElementById('registerForm').style.display === 'none' ? 'block' : 'none';
         }
 
-        // Fazer login
-        window.handleLogin = async function() {
+        // Login
+        async function handleLogin() {
+            if (!supabaseClient) {
+                showMessage('error', 'Supabase não foi inicializado');
+                return;
+            }
+
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
 
             if (!email || !password) {
-                showMessage('error', 'Por favor preencha email e senha');
+                showMessage('error', 'Preencha email e senha');
                 return;
             }
 
             try {
-                const { user, session, error } = await supabaseClient.auth.signIn({
-                    email, password
-                });
-
+                const { user, session, error } = await supabaseClient.auth.signIn({ email, password });
+                
                 if (error) throw error;
 
                 currentUser = user;
                 currentSession = session;
 
-                console.log('✅ Login realizado com sucesso');
-                console.log('📧 Email:', user.email);
-                console.log('🆔 User ID:', user.id);
-
+                console.log('✅ Login realizado!');
                 showApp();
                 await loadDataFromSupabase();
                 
             } catch (err) {
-                console.error('❌ Erro ao fazer login:', err.message);
-                showMessage('error', 'Erro ao fazer login: ' + err.message);
+                console.error('❌ Erro:', err.message);
+                showMessage('error', err.message);
             }
         }
 
-        // Fazer registro
-        window.handleRegister = async function() {
+        // Register
+        async function handleRegister() {
+            if (!supabaseClient) {
+                showMessage('error', 'Supabase não foi inicializado');
+                return;
+            }
+
             const email = document.getElementById('registerEmail').value;
             const password = document.getElementById('registerPassword').value;
 
-            if (!email || !password) {
-                showMessage('error', 'Por favor preencha todos os campos');
-                return;
-            }
-
-            if (password.length < 6) {
-                showMessage('error', 'Senha deve ter no mínimo 6 caracteres');
+            if (!email || password.length < 6) {
+                showMessage('error', 'Email e senha (mín 6 chars) obrigatórios');
                 return;
             }
 
             try {
-                const { user, session, error } = await supabaseClient.auth.signUp({
-                    email, password
-                });
-
+                const { error } = await supabaseClient.auth.signUp({ email, password });
                 if (error) throw error;
-
-                showMessage('success', 'Conta criada com sucesso! Faça login para continuar.');
+                showMessage('success', 'Conta criada! Faça login.');
                 toggleForm();
-                
             } catch (err) {
-                console.error('❌ Erro ao registrar:', err.message);
-                showMessage('error', 'Erro ao registrar: ' + err.message);
+                showMessage('error', err.message);
             }
         }
 
-        // Fazer logout
-        window.handleLogout = async function() {
+        // Logout
+        async function handleLogout() {
             try {
                 await supabaseClient.auth.signOut();
                 currentUser = null;
-                currentSession = null;
                 trades = [];
-                hideApp();
                 document.getElementById('loginEmail').value = '';
                 document.getElementById('loginPassword').value = '';
-                document.getElementById('authMessage').innerHTML = '';
+                document.getElementById('loginScreen').style.display = 'block';
+                document.getElementById('appScreen').style.display = 'none';
             } catch (err) {
-                console.error('❌ Erro ao fazer logout:', err);
+                console.error('Erro logout:', err);
             }
         }
 
         // Mostrar app
-        window.showApp = function() {
+        function showApp() {
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('appScreen').style.display = 'block';
             document.getElementById('userEmail').textContent = currentUser.email;
         }
 
-        // Esconder app
-        window.hideApp = function() {
-            document.getElementById('loginScreen').style.display = 'block';
-            document.getElementById('appScreen').style.display = 'none';
-        }
-
-        // Upload de arquivo
-        window.handleFileUpload = async function(event) {
+        // Upload CSV
+        async function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
-
-            console.log('📄 Arquivo selecionado:', file.name);
 
             const reader = new FileReader();
             reader.onload = async (e) => {
                 try {
-                    const csv = e.target.result;
-                    await processCSV(csv);
+                    await processCSV(e.target.result);
                 } catch (err) {
-                    console.error('❌ Erro ao processar arquivo:', err);
                     document.getElementById('uploadMessage').innerHTML = 
-                        `<div class="error">Erro ao processar arquivo: ${err.message}</div>`;
+                        `<div class="error">Erro: ${err.message}</div>`;
                 }
             };
             reader.readAsText(file);
@@ -591,17 +582,13 @@
 
         // Processar CSV
         async function processCSV(csv) {
-            console.log('🔄 Processando CSV...');
-            
             const lines = csv.split('\n');
             const headers = lines[0].split(';').map(h => h.trim());
             
-            let imported = 0;
-            let duplicates = 0;
-            let errors = 0;
+            let imported = 0, duplicates = 0, errors = 0;
 
             document.getElementById('uploadMessage').innerHTML = 
-                '<div class="loading">⏳ Importando dados...</div>';
+                '<div class="loading">⏳ Importando...</div>';
 
             for (let i = 1; i < lines.length; i++) {
                 if (!lines[i].trim()) continue;
@@ -610,14 +597,12 @@
                     const values = lines[i].split(';').map(v => v.trim());
                     const operation = {};
                     
-                    headers.forEach((header, idx) => {
-                        operation[header] = values[idx];
+                    headers.forEach((h, idx) => {
+                        operation[h] = values[idx];
                     });
 
-                    // Gerar ID único
                     const ninjaId = `${operation.Instrument}-${operation.Time}-${operation.Action}-${operation.Quantity}-${operation.Price}`;
 
-                    // Verificar duplicata
                     const { data: existing } = await supabaseClient
                         .from('operations')
                         .select('id')
@@ -630,12 +615,10 @@
                         continue;
                     }
 
-                    // Converter valores
                     const quantity = parseFloat(operation.Quantity.replace('.', '').replace(',', '.'));
                     const price = parseFloat(operation.Price.replace('.', '').replace(',', '.'));
                     const commission = parseFloat((operation.Commission || '0').replace('$', '').replace(',', '.'));
 
-                    // Inserir
                     const { error } = await supabaseClient
                         .from('operations')
                         .insert([{
@@ -654,29 +637,24 @@
 
                     if (error) {
                         errors++;
-                        console.error(`Erro na linha ${i}:`, error.message);
                     } else {
                         imported++;
                     }
 
                 } catch (err) {
                     errors++;
-                    console.error(`Erro ao processar linha ${i}:`, err.message);
                 }
             }
 
             document.getElementById('uploadMessage').innerHTML = 
-                `<div class="success">✅ Upload completo! ${imported} importadas, ${duplicates} duplicatas, ${errors} erros</div>`;
+                `<div class="success">✅ ${imported} importadas, ${duplicates} duplicatas, ${errors} erros</div>`;
 
             await loadDataFromSupabase();
         }
 
-        // Carregar dados do Supabase
+        // Carregar dados
         async function loadDataFromSupabase() {
             try {
-                console.log('📥 Carregando dados...');
-
-                // Carregar operações
                 const { data: operations } = await supabaseClient
                     .from('operations')
                     .select('*')
@@ -684,19 +662,16 @@
                     .order('time');
 
                 if (operations && operations.length > 0) {
-                    // Calcular trades
                     trades = calculateTrades(operations);
                     updateDashboard();
                 }
-
             } catch (err) {
-                console.error('❌ Erro ao carregar dados:', err);
+                console.error('❌ Erro:', err);
             }
         }
 
         // Calcular trades
         function calculateTrades(operations) {
-            // Agrupar por instrumento e conta
             const grouped = {};
             
             operations.forEach(op => {
@@ -711,10 +686,9 @@
                 let currentTrade = null;
 
                 ops.forEach(op => {
-                    if (currentTrade === null) {
+                    if (!currentTrade) {
                         currentTrade = {
                             instrument: op.instrument,
-                            account: op.account,
                             type: op.action === 'Buy' ? 'LONG' : 'SHORT',
                             entries: [op],
                             exits: [],
@@ -726,29 +700,21 @@
                         } else {
                             currentTrade.exits.push(op);
 
-                            // Se zerou a posição
-                            const entryQty = currentTrade.entries.reduce((sum, e) => sum + parseFloat(e.quantity || 0), 0);
-                            const exitQty = currentTrade.exits.reduce((sum, e) => sum + parseFloat(e.quantity || 0), 0);
+                            const entryQty = currentTrade.entries.reduce((s, e) => s + parseFloat(e.quantity || 0), 0);
+                            const exitQty = currentTrade.exits.reduce((s, e) => s + parseFloat(e.quantity || 0), 0);
 
                             if (entryQty === exitQty) {
-                                currentTrade.endTime = op.time;
                                 currentTrade.status = 'Closed';
-                                
-                                // Calcular PnL
-                                const avgEntry = currentTrade.entries.reduce((sum, e) => 
-                                    sum + (parseFloat(e.price) * parseFloat(e.quantity)), 0) / entryQty;
-                                const avgExit = currentTrade.exits.reduce((sum, e) => 
-                                    sum + (parseFloat(e.price) * parseFloat(e.quantity)), 0) / exitQty;
+                                const avgEntry = currentTrade.entries.reduce((s, e) => 
+                                    s + (parseFloat(e.price) * parseFloat(e.quantity)), 0) / entryQty;
+                                const avgExit = currentTrade.exits.reduce((s, e) => 
+                                    s + (parseFloat(e.price) * parseFloat(e.quantity)), 0) / exitQty;
 
                                 const pointsDiff = avgExit - avgEntry;
-                                const totalComm = [...currentTrade.entries, ...currentTrade.exits].reduce((sum, o) => 
-                                    sum + parseFloat(o.commission || 0), 0);
+                                const totalComm = [...currentTrade.entries, ...currentTrade.exits]
+                                    .reduce((s, o) => s + parseFloat(o.commission || 0), 0);
 
-                                const multiplier = {
-                                    'NQ': 20, 'MNQ': 2, 'GC': 100, 'MGC': 10
-                                };
-
-                                const mult = multiplier[currentTrade.instrument.substring(0, 3)] || 10;
+                                const mult = { 'NQ': 20, 'MNQ': 2, 'GC': 100, 'MGC': 10 }[currentTrade.instrument.substring(0, 3)] || 10;
                                 const pnlDollars = (pointsDiff * entryQty * mult) - totalComm;
 
                                 currentTrade.avgEntry = avgEntry.toFixed(2);
@@ -774,76 +740,52 @@
 
         // Atualizar dashboard
         function updateDashboard() {
-            // Atualizar estatísticas
             const stats = {
                 totalTrades: trades.filter(t => t.status === 'Closed').length,
                 openTrades: trades.filter(t => t.status === 'Open').length,
-                totalPnL: trades.reduce((sum, t) => sum + parseFloat(t.pnlDollars || 0), 0),
+                totalPnL: trades.reduce((s, t) => s + parseFloat(t.pnlDollars || 0), 0),
                 wins: trades.filter(t => parseFloat(t.pnlDollars || 0) > 0).length,
                 losses: trades.filter(t => parseFloat(t.pnlDollars || 0) < 0).length,
             };
 
-            const statsHtml = `
-                <div class="stat-card">
-                    <div class="stat-label">Total de Trades</div>
-                    <div class="stat-value">${stats.totalTrades}</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Trades Abertos</div>
-                    <div class="stat-value">${stats.openTrades}</div>
-                </div>
-                <div class="stat-card ${stats.totalPnL >= 0 ? 'success' : 'danger'}">
-                    <div class="stat-label">PnL Total</div>
-                    <div class="stat-value">$${stats.totalPnL.toFixed(2)}</div>
-                </div>
-                <div class="stat-card success">
-                    <div class="stat-label">Trades Positivos</div>
-                    <div class="stat-value">${stats.wins}</div>
-                </div>
-                <div class="stat-card danger">
-                    <div class="stat-label">Trades Negativos</div>
-                    <div class="stat-value">${stats.losses}</div>
-                </div>
+            document.getElementById('statsGrid').innerHTML = `
+                <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value">${stats.totalTrades}</div></div>
+                <div class="stat-card"><div class="stat-label">Abertos</div><div class="stat-value">${stats.openTrades}</div></div>
+                <div class="stat-card ${stats.totalPnL >= 0 ? 'success' : 'danger'}"><div class="stat-label">PnL Total</div><div class="stat-value">$${stats.totalPnL.toFixed(2)}</div></div>
+                <div class="stat-card success"><div class="stat-label">Positivos</div><div class="stat-value">${stats.wins}</div></div>
+                <div class="stat-card danger"><div class="stat-label">Negativos</div><div class="stat-value">${stats.losses}</div></div>
             `;
 
-            document.getElementById('statsGrid').innerHTML = statsHtml;
-
-            // Atualizar tabela
             let tableHtml = '';
-            trades.forEach(trade => {
+            trades.forEach(t => {
                 tableHtml += `
                     <tr>
-                        <td><span class="status-badge status-${trade.status.toLowerCase()}">${trade.status}</span></td>
-                        <td>${trade.instrument}</td>
-                        <td>${trade.type}</td>
-                        <td>${trade.avgEntry}</td>
-                        <td>${trade.avgExit || '-'}</td>
-                        <td>${trade.pnlPoints || '-'}</td>
-                        <td class="${parseFloat(trade.pnlDollars || 0) >= 0 ? 'pnl-positive' : 'pnl-negative'}">
-                            $${trade.pnlDollars || '-'}
-                        </td>
+                        <td><span class="status-badge status-${t.status.toLowerCase()}">${t.status}</span></td>
+                        <td>${t.instrument}</td>
+                        <td>${t.type}</td>
+                        <td>${t.avgEntry}</td>
+                        <td>${t.avgExit || '-'}</td>
+                        <td>${t.pnlPoints || '-'}</td>
+                        <td class="${parseFloat(t.pnlDollars || 0) >= 0 ? 'pnl-positive' : 'pnl-negative'}">$${t.pnlDollars || '-'}</td>
                     </tr>
                 `;
             });
 
             document.getElementById('tradesBody').innerHTML = tableHtml || '<tr><td colspan="7" class="loading">Nenhum trade</td></tr>';
 
-            // Atualizar gráficos
             if (trades.length > 0) {
                 updateCharts();
             }
         }
 
-        // Atualizar gráficos
+        // Gráficos
         function updateCharts() {
-            // Gráfico de PnL
-            const ctx1 = document.getElementById('pnlChart').getContext('2d');
-            new Chart(ctx1, {
+            new Chart(document.getElementById('pnlChart'), {
                 type: 'line',
                 data: {
                     labels: trades.map((_, i) => `Trade ${i + 1}`),
                     datasets: [{
-                        label: 'PnL Acumulado',
+                        label: 'PnL',
                         data: trades.map(t => parseFloat(t.pnlDollars || 0)),
                         borderColor: '#2196F3',
                         backgroundColor: 'rgba(33, 150, 243, 0.1)',
@@ -851,41 +793,32 @@
                         fill: true
                     }]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: true
-                        }
-                    }
-                }
+                options: { responsive: true, maintainAspectRatio: false }
             });
 
-            // Gráfico por instrumento
             const byInstrument = {};
             trades.forEach(t => {
                 byInstrument[t.instrument] = (byInstrument[t.instrument] || 0) + parseFloat(t.pnlDollars || 0);
             });
 
-            const ctx2 = document.getElementById('instrumentChart').getContext('2d');
-            new Chart(ctx2, {
+            new Chart(document.getElementById('instrumentChart'), {
                 type: 'bar',
                 data: {
                     labels: Object.keys(byInstrument),
                     datasets: [{
-                        label: 'PnL por Instrumento',
+                        label: 'PnL',
                         data: Object.values(byInstrument),
                         backgroundColor: Object.values(byInstrument).map(v => v >= 0 ? '#4CAF50' : '#f44336')
                     }]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    indexAxis: 'y'
-                }
+                options: { responsive: true, maintainAspectRatio: false }
             });
         }
+
+        // Inicializar quando página carregar
+        window.addEventListener('load', () => {
+            initSupabase();
+        });
     </script>
 </body>
 </html>
