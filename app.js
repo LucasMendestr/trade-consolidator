@@ -2,23 +2,19 @@
 let supabaseClient = null;
 let currentUser = null;
 let currentSession = null;
-let trades = [];
+let allTrades = [];
+let filteredTrades = [];
+let selectedTrade = null;
+let allOperations = [];
 
-// Inicializar Supabase
 function initSupabase() {
-    console.log('⏳ Inicializando Supabase...');
-    
     if (window.supabase) {
         const SUPABASE_URL = 'https://wswqbdjruvsfqhjkdvck.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indzd3FiZGpydXZzZnFoamtkdmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNzk4MjEsImV4cCI6MjA3ODY1NTgyMX0.-Ulf2Jf4Wf_5JMaPTzgHx5Ifg8sQqKTMW01Sofr3vMY';
-        
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        console.log('✅ Supabase inicializado!');
         return true;
-    } else {
-        console.error('❌ Supabase não carregou');
-        return false;
     }
+    return false;
 }
 
 function showMessage(type, text) {
@@ -59,7 +55,6 @@ async function handleLogin() {
         currentUser = data.user;
         currentSession = data.session;
 
-        console.log('✅ Login OK:', currentUser.email);
         showApp();
         await loadDataFromSupabase();
         
@@ -98,7 +93,7 @@ async function handleLogout() {
     try {
         await supabaseClient.auth.signOut();
         currentUser = null;
-        trades = [];
+        allTrades = [];
         document.getElementById('loginScreen').style.display = 'block';
         document.getElementById('appScreen').style.display = 'none';
     } catch (err) {
@@ -129,12 +124,10 @@ async function handleFileUpload(event) {
 }
 
 async function processCSV(csv) {
-    console.log('🔄 Processando CSV...');
-    
     const lines = csv.split('\n');
     const headers = lines[0].split(';').map(h => h.trim());
     
-    let imported = 0, duplicates = 0, errors = 0;
+    let imported = 0, duplicates = 0;
 
     document.getElementById('uploadMessage').innerHTML = 
         '<div class="loading">⏳ Importando...</div>';
@@ -184,18 +177,15 @@ async function processCSV(csv) {
                     account: operation.Account
                 }]);
 
-            if (error) {
-                errors++;
-            } else {
+            if (!error) {
                 imported++;
             }
 
         } catch (err) {
-            errors++;
+            console.error('Erro linha:', err);
         }
     }
 
-    console.log(`✅ ${imported} importadas`);
     document.getElementById('uploadMessage').innerHTML = 
         `<div class="success">✅ ${imported} importadas, ${duplicates} duplicatas</div>`;
 
@@ -204,8 +194,6 @@ async function processCSV(csv) {
 
 async function loadDataFromSupabase() {
     try {
-        console.log('📥 Carregando operações...');
-
         const { data: operations } = await supabaseClient
             .from('operations')
             .select('*')
@@ -213,18 +201,15 @@ async function loadDataFromSupabase() {
             .order('time');
 
         if (operations && operations.length > 0) {
-            console.log(`📊 ${operations.length} operações`);
+            allOperations = operations;
             calculateAndDisplayTrades(operations);
         }
     } catch (err) {
-        console.error('❌ Erro:', err);
+        console.error('Erro carregamento:', err);
     }
 }
 
 function calculateAndDisplayTrades(operations) {
-    console.log('🔄 Calculando trades...');
-    
-    // Agrupar por instrumento
     const grouped = {};
     operations.forEach(op => {
         const key = op.instrument;
@@ -232,15 +217,13 @@ function calculateAndDisplayTrades(operations) {
         grouped[key].push(op);
     });
 
-    trades = [];
+    allTrades = [];
 
-    // Processar cada grupo de operações
     Object.entries(grouped).forEach(([instrument, ops]) => {
         let tradeOpen = null;
 
         ops.forEach(op => {
             if (!tradeOpen) {
-                // Abrir novo trade
                 if (op.e_x === 'Entry') {
                     tradeOpen = {
                         instrument: op.instrument,
@@ -254,18 +237,14 @@ function calculateAndDisplayTrades(operations) {
                 }
             } else {
                 if (op.e_x === 'Entry') {
-                    // Adicionar mais entry
                     tradeOpen.entries.push(op);
                 } else {
-                    // Adicionar exit
                     tradeOpen.exits.push(op);
 
-                    // Calcular se trade fechou
                     const entryQty = tradeOpen.entries.reduce((s, e) => s + parseFloat(e.quantity || 0), 0);
                     const exitQty = tradeOpen.exits.reduce((s, e) => s + parseFloat(e.quantity || 0), 0);
 
                     if (entryQty <= exitQty) {
-                        // Trade fechou
                         const avgEntry = tradeOpen.entries.reduce((s, e) => 
                             s + (parseFloat(e.price) * parseFloat(e.quantity)), 0) / entryQty;
                         const avgExit = tradeOpen.exits.reduce((s, e) => 
@@ -285,55 +264,132 @@ function calculateAndDisplayTrades(operations) {
                         tradeOpen.pnlDollars = pnlDollars.toFixed(2);
                         tradeOpen.endTime = op.time;
 
-                        trades.push(tradeOpen);
+                        allTrades.push(tradeOpen);
                         tradeOpen = null;
                     }
                 }
             }
         });
 
-        // Se sobrou trade aberto
         if (tradeOpen) {
-            trades.push(tradeOpen);
+            allTrades.push(tradeOpen);
         }
     });
 
-    console.log(`📈 ${trades.length} trades calculados`);
+    populateAccountFilter();
+    filterTrades();
     updateDashboard();
 }
 
+function populateAccountFilter() {
+    const accounts = [...new Set(allTrades.map(t => t.account))].sort();
+    const filter = document.getElementById('accountFilter');
+    const currentValue = filter.value;
+    
+    filter.innerHTML = '<option value="">Todas as contas</option>';
+    accounts.forEach(acc => {
+        filter.innerHTML += `<option value="${acc}">${acc}</option>`;
+    });
+    
+    filter.value = currentValue;
+}
+
+function filterTrades() {
+    const accountFilter = document.getElementById('accountFilter').value;
+    
+    filteredTrades = allTrades.filter(t => {
+        if (accountFilter && t.account !== accountFilter) return false;
+        return true;
+    });
+
+    updateTradesTable();
+}
+
 function updateDashboard() {
+    const closedTrades = filteredTrades.filter(t => t.status === 'Closed');
     const stats = {
-        totalTrades: trades.filter(t => t.status === 'Closed').length,
-        openTrades: trades.filter(t => t.status === 'Open').length,
-        totalPnL: trades.reduce((s, t) => s + parseFloat(t.pnlDollars || 0), 0),
-        wins: trades.filter(t => parseFloat(t.pnlDollars || 0) > 0).length,
-        losses: trades.filter(t => parseFloat(t.pnlDollars || 0) < 0).length,
+        totalTrades: closedTrades.length,
+        openTrades: filteredTrades.filter(t => t.status === 'Open').length,
+        totalPnL: filteredTrades.reduce((s, t) => s + parseFloat(t.pnlDollars || 0), 0),
+        wins: filteredTrades.filter(t => parseFloat(t.pnlDollars || 0) > 0).length,
+        losses: filteredTrades.filter(t => parseFloat(t.pnlDollars || 0) < 0).length,
     };
 
     document.getElementById('statsGrid').innerHTML = `
         <div class="stat-card"><div class="stat-label">Trades Fechados</div><div class="stat-value">${stats.totalTrades}</div></div>
         <div class="stat-card"><div class="stat-label">Abertos</div><div class="stat-value">${stats.openTrades}</div></div>
-        <div class="stat-card"><div class="stat-label">PnL Total</div><div class="stat-value">$${stats.totalPnL.toFixed(2)}</div></div>
+        <div class="stat-card"><div class="stat-label">PnL Total</div><div class="stat-value" style="color: ${stats.totalPnL >= 0 ? '#4CAF50' : '#f44336'}">$${stats.totalPnL.toFixed(2)}</div></div>
         <div class="stat-card"><div class="stat-label">Wins</div><div class="stat-value">${stats.wins}</div></div>
         <div class="stat-card"><div class="stat-label">Losses</div><div class="stat-value">${stats.losses}</div></div>
     `;
+}
 
+function updateTradesTable() {
     let tableHtml = '';
-    trades.forEach(t => {
+    filteredTrades.forEach((t, idx) => {
+        const statusClass = t.status === 'Closed' ? 'status-closed' : 'status-open';
+        const pnlClass = parseFloat(t.pnlDollars || 0) >= 0 ? 'pnl-positive' : 'pnl-negative';
+        
         tableHtml += `
-            <tr>
-                <td>${t.status}</td>
+            <tr onclick="showTradeDetails(${idx})" style="cursor: pointer;">
+                <td><span class="${statusClass}">${t.status}</span></td>
+                <td>${t.account}</td>
                 <td>${t.instrument}</td>
                 <td>${t.type}</td>
-                <td>${t.avgEntry || '-'}</td>
-                <td>${t.avgExit || '-'}</td>
-                <td style="color: ${parseFloat(t.pnlDollars || 0) >= 0 ? 'green' : 'red'}">$${t.pnlDollars || '-'}</td>
+                <td>$${t.avgEntry}</td>
+                <td>$${t.avgExit || '-'}</td>
+                <td>${t.pnlPoints || '-'}</td>
+                <td class="${pnlClass}">$${t.pnlDollars || '-'}</td>
             </tr>
         `;
     });
 
-    document.getElementById('tradesBody').innerHTML = tableHtml || '<tr><td colspan="6">Nenhum trade</td></tr>';
+    document.getElementById('tradesBody').innerHTML = tableHtml || '<tr><td colspan="8" class="loading">Nenhum trade</td></tr>';
+}
+
+function showTradeDetails(idx) {
+    selectedTrade = filteredTrades[idx];
+    document.getElementById('tradeDetails').style.display = 'block';
+    
+    document.getElementById('detailInstrument').textContent = selectedTrade.instrument;
+    document.getElementById('detailType').textContent = selectedTrade.type;
+    document.getElementById('detailStatus').textContent = selectedTrade.status;
+    document.getElementById('detailAccount').textContent = selectedTrade.account;
+    document.getElementById('detailAvgEntry').textContent = selectedTrade.avgEntry;
+    document.getElementById('detailAvgExit').textContent = selectedTrade.avgExit || '-';
+    
+    const pnlValue = parseFloat(selectedTrade.pnlDollars || 0);
+    const pnlColor = pnlValue >= 0 ? '#4CAF50' : '#f44336';
+    document.getElementById('detailPnL').innerHTML = `<span style="color: ${pnlColor};">$${selectedTrade.pnlDollars}</span>`;
+    
+    populateOperationsTable();
+    window.scrollTo(0, document.getElementById('tradeDetails').offsetTop - 100);
+}
+
+function populateOperationsTable() {
+    const allOps = [...selectedTrade.entries, ...selectedTrade.exits].sort((a, b) => new Date(a.time) - new Date(b.time));
+    
+    let html = '';
+    allOps.forEach(op => {
+        const timeStr = new Date(op.time).toLocaleString('pt-BR');
+        html += `
+            <tr>
+                <td style="padding: 10px;">${timeStr}</td>
+                <td style="padding: 10px;">${op.action}</td>
+                <td style="padding: 10px;">${parseFloat(op.quantity).toFixed(2)}</td>
+                <td style="padding: 10px;">$${parseFloat(op.price).toFixed(2)}</td>
+                <td style="padding: 10px;">$${parseFloat(op.commission || 0).toFixed(2)}</td>
+                <td style="padding: 10px;">${op.e_x}</td>
+            </tr>
+        `;
+    });
+    
+    document.getElementById('detailOperations').innerHTML = html;
+}
+
+function closeTradeDetails() {
+    document.getElementById('tradeDetails').style.display = 'none';
+    selectedTrade = null;
 }
 
 window.addEventListener('load', () => {
