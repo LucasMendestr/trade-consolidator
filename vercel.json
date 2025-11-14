@@ -1,0 +1,81 @@
+// api/auth.js - Supabase Auth Backend
+const { createClient } = require('@supabase/supabase-js');
+const cors = require('micro-cors')();
+
+const SUPABASE_URL = 'https://wswqbdjruvsfqhjkdvck.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indzd3FiZGpydXZzZnFoamtkdmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNzk4MjEsImV4cCI6MjA3ODY1NTgyMX0.-Ulf2Jf4Wf_5JMaPTzgHx5Ifg8sQqKTMW01Sofr3vMY';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Armazenar sessions em memória (para Vercel serverless)
+const sessions = {};
+
+module.exports = cors(async (req, res) => {
+  if (req.method === 'POST') {
+    const { action, email, password, token } = req.body;
+
+    try {
+      if (action === 'register') {
+        // Registrar novo usuário
+        const { user, session, error } = await supabase.auth.signUp({
+          email,
+          password
+        });
+
+        if (error) throw error;
+
+        // Guardar session
+        const sessionId = Math.random().toString(36).substring(7);
+        sessions[sessionId] = {
+          user,
+          session,
+          token: session.access_token
+        };
+
+        return res.json({
+          success: true,
+          sessionId,
+          user,
+          token: session.access_token
+        });
+      }
+
+      if (action === 'login') {
+        // Fazer login
+        const { user, session, error } = await supabase.auth.signIn({
+          email,
+          password
+        });
+
+        if (error) throw error;
+
+        // Guardar session
+        const sessionId = Math.random().toString(36).substring(7);
+        sessions[sessionId] = {
+          user,
+          session,
+          token: session.access_token
+        };
+
+        return res.json({
+          success: true,
+          sessionId,
+          user,
+          token: session.access_token
+        });
+      }
+
+      if (action === 'logout') {
+        delete sessions[token];
+        return res.json({ success: true });
+      }
+
+      return res.status(400).json({ error: 'Action inválida' });
+
+    } catch (error) {
+      return res.status(400).json({ error: error.message });
+    }
+  }
+
+  res.status(405).json({ error: 'Method not allowed' });
+});
