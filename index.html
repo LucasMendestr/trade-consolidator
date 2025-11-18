@@ -21,6 +21,8 @@
         .btn-primary:hover { background: #1976D2; }
         .btn-secondary { background: #f0f0f0; width: 100%; margin: 10px 0; }
         .btn-secondary:hover { background: #e0e0e0; }
+        .btn-danger { background: #f44336; color: white; padding: 8px 15px; }
+        .btn-danger:hover { background: #d32f2f; }
         
         .error { background: #ffebee; color: #f44336; padding: 10px; border-radius: 4px; margin: 10px 0; }
         .success { background: #e8f5e9; color: #4CAF50; padding: 10px; border-radius: 4px; margin: 10px 0; }
@@ -32,6 +34,7 @@
         .user-section p { margin: 5px 0; color: #666; }
         
         .upload-section { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .upload-controls { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .upload-area { border: 2px dashed #2196F3; padding: 40px; text-align: center; border-radius: 8px; cursor: pointer; background: #f0f7ff; margin: 10px 0; transition: 0.3s; }
         .upload-area:hover { background: #e3f2fd; border-color: #1976D2; }
         .upload-area p { color: #333; margin: 5px 0; }
@@ -125,7 +128,10 @@
 
             <!-- UPLOAD -->
             <div class="upload-section">
-                <h3>📤 Importar CSV</h3>
+                <div class="upload-controls">
+                    <h3 style="margin: 0;">📤 Importar CSV</h3>
+                    <button class="btn btn-danger" onclick="deleteAllTransactions()">🗑️ Excluir Tudo</button>
+                </div>
                 <div class="upload-area" onclick="document.getElementById('csvFile').click()">
                     <p>📁 Clique para selecionar arquivo CSV</p>
                     <p style="font-size: 12px; color: #999;">NinjaTrader Export</p>
