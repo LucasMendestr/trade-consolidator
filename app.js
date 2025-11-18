@@ -1,4 +1,4 @@
-/ Variáveis globais
+// Variáveis globais
 let supabaseClient = null;
 let currentUser = null;
 let currentSession = null;
@@ -12,26 +12,34 @@ function initSupabase() {
         const SUPABASE_URL = 'https://wswqbdjruvsfqhjkdvck.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indzd3FiZGpydXZzZnFoamtkdmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNzk4MjEsImV4cCI6MjA3ODY1NTgyMX0.-Ulf2Jf4Wf_5JMaPTzgHx5Ifg8sQqKTMW01Sofr3vMY';
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        console.log('✅ Supabase inicializado');
         return true;
     }
+    console.error('❌ Supabase não carregou');
     return false;
 }
 
 function showMessage(type, text) {
     const msg = document.getElementById('authMessage');
     if (type === 'error') {
-        msg.innerHTML = `<div class="error">${text}</div>`;
+        msg.innerHTML = '<div class="error">' + text + '</div>';
     } else {
-        msg.innerHTML = `<div class="success">${text}</div>`;
+        msg.innerHTML = '<div class="success">' + text + '</div>';
     }
-    setTimeout(() => { msg.innerHTML = ''; }, 5000);
+    setTimeout(function() { msg.innerHTML = ''; }, 5000);
 }
 
 function toggleForm() {
-    document.getElementById('loginForm').style.display = 
-        document.getElementById('loginForm').style.display === 'none' ? 'block' : 'none';
-    document.getElementById('registerForm').style.display = 
-        document.getElementById('registerForm').style.display === 'none' ? 'block' : 'none';
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    
+    if (loginForm.style.display === 'none') {
+        loginForm.style.display = 'block';
+        registerForm.style.display = 'none';
+    } else {
+        loginForm.style.display = 'none';
+        registerForm.style.display = 'block';
+    }
 }
 
 async function handleLogin() {
@@ -49,16 +57,19 @@ async function handleLogin() {
     }
 
     try {
-        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        const result = await supabaseClient.auth.signInWithPassword({ email: email, password: password });
+        
+        if (result.error) throw result.error;
 
-        currentUser = data.user;
-        currentSession = data.session;
+        currentUser = result.data.user;
+        currentSession = result.data.session;
 
+        console.log('✅ Login OK');
         showApp();
         await loadDataFromSupabase();
         
     } catch (err) {
+        console.error('Erro login:', err);
         showMessage('error', err.message);
     }
 }
@@ -78,13 +89,16 @@ async function handleRegister() {
     }
 
     try {
-        const { data, error } = await supabaseClient.auth.signUp({ email, password });
-        if (error) throw error;
+        const result = await supabaseClient.auth.signUp({ email: email, password: password });
+        
+        if (result.error) throw result.error;
 
+        console.log('✅ Registro OK');
         showMessage('success', 'Conta criada! Faça login.');
         toggleForm();
         
     } catch (err) {
+        console.error('Erro registro:', err);
         showMessage('error', err.message);
     }
 }
@@ -96,6 +110,7 @@ async function handleLogout() {
         allTrades = [];
         document.getElementById('loginScreen').style.display = 'block';
         document.getElementById('appScreen').style.display = 'none';
+        console.log('✅ Logout OK');
     } catch (err) {
         console.error('Erro logout:', err);
     }
@@ -111,29 +126,28 @@ async function handleFileUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
 
+    console.log('📄 Arquivo:', file.name);
     const reader = new FileReader();
-    reader.onload = async (e) => {
+    
+    reader.onload = async function(e) {
         try {
             await processCSV(e.target.result);
         } catch (err) {
-            document.getElementById('uploadMessage').innerHTML = 
-                `<div class="error">Erro: ${err.message}</div>`;
+            console.error('Erro:', err);
+            document.getElementById('uploadMessage').innerHTML = '<div class="error">Erro: ' + err.message + '</div>';
         }
     };
     reader.readAsText(file);
 }
 
-// Função para verificar duplicidade completa
 async function isDuplicateOperation(operation) {
     try {
-        // Converter valores para os mesmos tipos que estão no banco
         const quantity = parseFloat(operation.Quantity.replace('.', '').replace(',', '.'));
         const price = parseFloat(operation.Price.replace('.', '').replace(',', '.'));
         const commission = parseFloat((operation.Commission || '0').replace('$', '').replace(',', '.'));
         const operationTime = new Date(operation.Time).toISOString();
 
-        // Buscar operações no banco que correspondem a estes critérios
-        const { data: existing } = await supabaseClient
+        const result = await supabaseClient
             .from('operations')
             .select('*')
             .eq('user_id', currentUser.id)
@@ -142,19 +156,20 @@ async function isDuplicateOperation(operation) {
             .eq('account', operation.Account)
             .eq('e_x', operation['E/X']);
 
+        const existing = result.data;
+
         if (!existing || existing.length === 0) {
-            return false; // Não é duplicada
+            return false;
         }
 
-        // Verificar se alguma operação tem TODOS os campos exatamente iguais
-        for (let op of existing) {
+        for (let i = 0; i < existing.length; i++) {
+            const op = existing[i];
             const isSameTime = new Date(op.time).toISOString() === operationTime;
             const isSameQuantity = Math.abs(parseFloat(op.quantity) - quantity) < 0.0001;
             const isSamePrice = Math.abs(parseFloat(op.price) - price) < 0.0001;
             const isSameCommission = Math.abs(parseFloat(op.commission || 0) - commission) < 0.0001;
             const isSamePosition = op.position === operation.Position;
 
-            // Se TODOS os campos são iguais, é duplicada
             if (isSameTime && isSameQuantity && isSamePrice && isSameCommission && isSamePosition) {
                 return true;
             }
@@ -163,36 +178,38 @@ async function isDuplicateOperation(operation) {
         return false;
 
     } catch (err) {
-        console.error('Erro verificação duplicidade:', err);
+        console.error('Erro duplicidade:', err);
         return false;
     }
 }
 
 async function processCSV(csv) {
-    const lines = csv.split('\n');
-    const headers = lines[0].split(';').map(h => h.trim());
+    console.log('🔄 Processando CSV');
     
-    let imported = 0, duplicates = 0, errors = 0;
+    const lines = csv.split('\n');
+    const headers = lines[0].split(';').map(function(h) { return h.trim(); });
+    
+    let imported = 0;
+    let duplicates = 0;
+    let errors = 0;
 
-    document.getElementById('uploadMessage').innerHTML = 
-        '<div class="loading">⏳ Importando...</div>';
+    document.getElementById('uploadMessage').innerHTML = '<div class="loading">⏳ Importando...</div>';
 
     for (let i = 1; i < lines.length; i++) {
         if (!lines[i].trim()) continue;
 
         try {
-            const values = lines[i].split(';').map(v => v.trim());
+            const values = lines[i].split(';').map(function(v) { return v.trim(); });
             const operation = {};
             
-            headers.forEach((h, idx) => {
-                operation[h] = values[idx];
-            });
+            for (let j = 0; j < headers.length; j++) {
+                operation[headers[j]] = values[j];
+            }
 
-            // VERIFICAR DUPLICIDADE COMPLETA
             const isDuplicate = await isDuplicateOperation(operation);
             
             if (isDuplicate) {
-                console.log('⚠️ Duplicada encontrada:', operation.Instrument, operation.Time);
+                console.log('⚠️ Duplicada:', operation.Instrument, operation.Time);
                 duplicates++;
                 continue;
             }
@@ -201,7 +218,7 @@ async function processCSV(csv) {
             const price = parseFloat(operation.Price.replace('.', '').replace(',', '.'));
             const commission = parseFloat((operation.Commission || '0').replace('$', '').replace(',', '.'));
 
-            const { error } = await supabaseClient
+            const result = await supabaseClient
                 .from('operations')
                 .insert([{
                     user_id: currentUser.id,
@@ -216,36 +233,43 @@ async function processCSV(csv) {
                     account: operation.Account
                 }]);
 
-            if (!error) {
-                imported++;
-            } else {
+            if (result.error) {
                 errors++;
-                console.error('Erro insert:', error.message);
+                console.error('Erro insert:', result.error.message);
+            } else {
+                imported++;
             }
 
         } catch (err) {
             errors++;
-            console.error('Erro linha:', err);
+            console.error('Erro linha', i, ':', err);
         }
     }
 
     document.getElementById('uploadMessage').innerHTML = 
-        `<div class="success">✅ ${imported} importadas, ${duplicates} duplicatas, ${errors} erros</div>`;
+        '<div class="success">✅ ' + imported + ' importadas, ' + duplicates + ' duplicatas, ' + errors + ' erros</div>';
 
     await loadDataFromSupabase();
 }
 
 async function loadDataFromSupabase() {
     try {
-        const { data: operations } = await supabaseClient
+        console.log('📥 Carregando operações');
+
+        const result = await supabaseClient
             .from('operations')
             .select('*')
             .eq('user_id', currentUser.id)
             .order('time');
 
+        const operations = result.data;
+
         if (operations && operations.length > 0) {
             allOperations = operations;
+            console.log('📊 ' + operations.length + ' operações');
             calculateAndDisplayTrades(operations);
+        } else {
+            console.log('ℹ️ Nenhuma operação');
         }
     } catch (err) {
         console.error('Erro carregamento:', err);
@@ -254,18 +278,23 @@ async function loadDataFromSupabase() {
 
 function calculateAndDisplayTrades(operations) {
     const grouped = {};
-    operations.forEach(op => {
+    
+    for (let i = 0; i < operations.length; i++) {
+        const op = operations[i];
         const key = op.instrument;
         if (!grouped[key]) grouped[key] = [];
         grouped[key].push(op);
-    });
+    }
 
     allTrades = [];
 
-    Object.entries(grouped).forEach(([instrument, ops]) => {
+    for (const instrument in grouped) {
+        const ops = grouped[instrument];
         let tradeOpen = null;
 
-        ops.forEach(op => {
+        for (let i = 0; i < ops.length; i++) {
+            const op = ops[i];
+            
             if (!tradeOpen) {
                 if (op.e_x === 'Entry') {
                     tradeOpen = {
@@ -284,20 +313,43 @@ function calculateAndDisplayTrades(operations) {
                 } else {
                     tradeOpen.exits.push(op);
 
-                    const entryQty = tradeOpen.entries.reduce((s, e) => s + parseFloat(e.quantity || 0), 0);
-                    const exitQty = tradeOpen.exits.reduce((s, e) => s + parseFloat(e.quantity || 0), 0);
+                    let entryQty = 0;
+                    for (let j = 0; j < tradeOpen.entries.length; j++) {
+                        entryQty += parseFloat(tradeOpen.entries[j].quantity || 0);
+                    }
+
+                    let exitQty = 0;
+                    for (let j = 0; j < tradeOpen.exits.length; j++) {
+                        exitQty += parseFloat(tradeOpen.exits[j].quantity || 0);
+                    }
 
                     if (entryQty <= exitQty) {
-                        const avgEntry = tradeOpen.entries.reduce((s, e) => 
-                            s + (parseFloat(e.price) * parseFloat(e.quantity)), 0) / entryQty;
-                        const avgExit = tradeOpen.exits.reduce((s, e) => 
-                            s + (parseFloat(e.price) * parseFloat(e.quantity)), 0) / exitQty;
+                        let avgEntryNumerator = 0;
+                        for (let j = 0; j < tradeOpen.entries.length; j++) {
+                            const e = tradeOpen.entries[j];
+                            avgEntryNumerator += parseFloat(e.price) * parseFloat(e.quantity);
+                        }
+                        const avgEntry = avgEntryNumerator / entryQty;
+
+                        let avgExitNumerator = 0;
+                        for (let j = 0; j < tradeOpen.exits.length; j++) {
+                            const e = tradeOpen.exits[j];
+                            avgExitNumerator += parseFloat(e.price) * parseFloat(e.quantity);
+                        }
+                        const avgExit = avgExitNumerator / exitQty;
 
                         const pointsDiff = avgExit - avgEntry;
-                        const totalComm = [...tradeOpen.entries, ...tradeOpen.exits]
-                            .reduce((s, o) => s + parseFloat(o.commission || 0), 0);
+                        
+                        let totalComm = 0;
+                        for (let j = 0; j < tradeOpen.entries.length; j++) {
+                            totalComm += parseFloat(tradeOpen.entries[j].commission || 0);
+                        }
+                        for (let j = 0; j < tradeOpen.exits.length; j++) {
+                            totalComm += parseFloat(tradeOpen.exits[j].commission || 0);
+                        }
 
-                        const mult = { 'NQ': 20, 'MNQ': 2, 'GC': 100, 'MGC': 10 }[instrument.substring(0, 3)] || 10;
+                        const multipliers = { 'NQ': 20, 'MNQ': 2, 'GC': 100, 'MGC': 10 };
+                        const mult = multipliers[instrument.substring(0, 3)] || 10;
                         const pnlDollars = (pointsDiff * entryQty * mult) - totalComm;
 
                         tradeOpen.status = 'Closed';
@@ -312,27 +364,35 @@ function calculateAndDisplayTrades(operations) {
                     }
                 }
             }
-        });
+        }
 
         if (tradeOpen) {
             allTrades.push(tradeOpen);
         }
-    });
+    }
 
+    console.log('📈 ' + allTrades.length + ' trades');
     populateAccountFilter();
     filterTrades();
     updateDashboard();
 }
 
 function populateAccountFilter() {
-    const accounts = [...new Set(allTrades.map(t => t.account))].sort();
+    const accounts = [];
+    for (let i = 0; i < allTrades.length; i++) {
+        if (accounts.indexOf(allTrades[i].account) === -1) {
+            accounts.push(allTrades[i].account);
+        }
+    }
+    accounts.sort();
+
     const filter = document.getElementById('accountFilter');
     const currentValue = filter.value;
     
     filter.innerHTML = '<option value="">Todas as contas</option>';
-    accounts.forEach(acc => {
-        filter.innerHTML += `<option value="${acc}">${acc}</option>`;
-    });
+    for (let i = 0; i < accounts.length; i++) {
+        filter.innerHTML += '<option value="' + accounts[i] + '">' + accounts[i] + '</option>';
+    }
     
     filter.value = currentValue;
 }
@@ -340,54 +400,71 @@ function populateAccountFilter() {
 function filterTrades() {
     const accountFilter = document.getElementById('accountFilter').value;
     
-    filteredTrades = allTrades.filter(t => {
-        if (accountFilter && t.account !== accountFilter) return false;
-        return true;
-    });
+    filteredTrades = [];
+    for (let i = 0; i < allTrades.length; i++) {
+        const t = allTrades[i];
+        if (accountFilter && t.account !== accountFilter) continue;
+        filteredTrades.push(t);
+    }
 
     updateTradesTable();
 }
 
 function updateDashboard() {
-    const closedTrades = filteredTrades.filter(t => t.status === 'Closed');
-    const stats = {
-        totalTrades: closedTrades.length,
-        openTrades: filteredTrades.filter(t => t.status === 'Open').length,
-        totalPnL: filteredTrades.reduce((s, t) => s + parseFloat(t.pnlDollars || 0), 0),
-        wins: filteredTrades.filter(t => parseFloat(t.pnlDollars || 0) > 0).length,
-        losses: filteredTrades.filter(t => parseFloat(t.pnlDollars || 0) < 0).length,
-    };
+    let closedCount = 0;
+    let openCount = 0;
+    let totalPnL = 0;
+    let wins = 0;
+    let losses = 0;
 
-    document.getElementById('statsGrid').innerHTML = `
-        <div class="stat-card"><div class="stat-label">Trades Fechados</div><div class="stat-value">${stats.totalTrades}</div></div>
-        <div class="stat-card"><div class="stat-label">Abertos</div><div class="stat-value">${stats.openTrades}</div></div>
-        <div class="stat-card"><div class="stat-label">PnL Total</div><div class="stat-value" style="color: ${stats.totalPnL >= 0 ? '#4CAF50' : '#f44336'}">$${stats.totalPnL.toFixed(2)}</div></div>
-        <div class="stat-card"><div class="stat-label">Wins</div><div class="stat-value">${stats.wins}</div></div>
-        <div class="stat-card"><div class="stat-label">Losses</div><div class="stat-value">${stats.losses}</div></div>
-    `;
+    for (let i = 0; i < filteredTrades.length; i++) {
+        const t = filteredTrades[i];
+        if (t.status === 'Closed') closedCount++;
+        if (t.status === 'Open') openCount++;
+        
+        const pnl = parseFloat(t.pnlDollars || 0);
+        totalPnL += pnl;
+        if (pnl > 0) wins++;
+        if (pnl < 0) losses++;
+    }
+
+    const pnlColor = totalPnL >= 0 ? '#4CAF50' : '#f44336';
+    
+    document.getElementById('statsGrid').innerHTML = 
+        '<div class="stat-card"><div class="stat-label">Trades Fechados</div><div class="stat-value">' + closedCount + '</div></div>' +
+        '<div class="stat-card"><div class="stat-label">Abertos</div><div class="stat-value">' + openCount + '</div></div>' +
+        '<div class="stat-card"><div class="stat-label">PnL Total</div><div class="stat-value" style="color: ' + pnlColor + '">$' + totalPnL.toFixed(2) + '</div></div>' +
+        '<div class="stat-card"><div class="stat-label">Wins</div><div class="stat-value">' + wins + '</div></div>' +
+        '<div class="stat-card"><div class="stat-label">Losses</div><div class="stat-value">' + losses + '</div></div>';
 }
 
 function updateTradesTable() {
     let tableHtml = '';
-    filteredTrades.forEach((t, idx) => {
+    
+    for (let i = 0; i < filteredTrades.length; i++) {
+        const t = filteredTrades[i];
         const statusClass = t.status === 'Closed' ? 'status-closed' : 'status-open';
         const pnlClass = parseFloat(t.pnlDollars || 0) >= 0 ? 'pnl-positive' : 'pnl-negative';
         
-        tableHtml += `
-            <tr onclick="showTradeDetails(${idx})" style="cursor: pointer;">
-                <td><span class="${statusClass}">${t.status}</span></td>
-                <td>${t.account}</td>
-                <td>${t.instrument}</td>
-                <td>${t.type}</td>
-                <td>$${t.avgEntry}</td>
-                <td>$${t.avgExit || '-'}</td>
-                <td>${t.pnlPoints || '-'}</td>
-                <td class="${pnlClass}">$${t.pnlDollars || '-'}</td>
-            </tr>
-        `;
-    });
+        tableHtml += 
+            '<tr onclick="showTradeDetails(' + i + ')" style="cursor: pointer;">' +
+            '<td><span class="' + statusClass + '">' + t.status + '</span></td>' +
+            '<td>' + t.account + '</td>' +
+            '<td>' + t.instrument + '</td>' +
+            '<td>' + t.type + '</td>' +
+            '<td>$' + t.avgEntry + '</td>' +
+            '<td>$' + (t.avgExit || '-') + '</td>' +
+            '<td>' + (t.pnlPoints || '-') + '</td>' +
+            '<td class="' + pnlClass + '">$' + (t.pnlDollars || '-') + '</td>' +
+            '</tr>';
+    }
 
-    document.getElementById('tradesBody').innerHTML = tableHtml || '<tr><td colspan="8" class="loading">Nenhum trade</td></tr>';
+    const tradesBody = document.getElementById('tradesBody');
+    if (tableHtml === '') {
+        tradesBody.innerHTML = '<tr><td colspan="8" class="loading">Nenhum trade</td></tr>';
+    } else {
+        tradesBody.innerHTML = tableHtml;
+    }
 }
 
 function showTradeDetails(idx) {
@@ -403,29 +480,39 @@ function showTradeDetails(idx) {
     
     const pnlValue = parseFloat(selectedTrade.pnlDollars || 0);
     const pnlColor = pnlValue >= 0 ? '#4CAF50' : '#f44336';
-    document.getElementById('detailPnL').innerHTML = `<span style="color: ${pnlColor};">$${selectedTrade.pnlDollars}</span>`;
+    document.getElementById('detailPnL').innerHTML = '<span style="color: ' + pnlColor + ';">$' + selectedTrade.pnlDollars + '</span>';
     
     populateOperationsTable();
     window.scrollTo(0, document.getElementById('tradeDetails').offsetTop - 100);
 }
 
 function populateOperationsTable() {
-    const allOps = [...selectedTrade.entries, ...selectedTrade.exits].sort((a, b) => new Date(a.time) - new Date(b.time));
+    const allOps = [];
+    for (let i = 0; i < selectedTrade.entries.length; i++) {
+        allOps.push(selectedTrade.entries[i]);
+    }
+    for (let i = 0; i < selectedTrade.exits.length; i++) {
+        allOps.push(selectedTrade.exits[i]);
+    }
+    
+    allOps.sort(function(a, b) {
+        return new Date(a.time) - new Date(b.time);
+    });
     
     let html = '';
-    allOps.forEach(op => {
+    for (let i = 0; i < allOps.length; i++) {
+        const op = allOps[i];
         const timeStr = new Date(op.time).toLocaleString('pt-BR');
-        html += `
-            <tr>
-                <td style="padding: 10px;">${timeStr}</td>
-                <td style="padding: 10px;">${op.action}</td>
-                <td style="padding: 10px;">${parseFloat(op.quantity).toFixed(2)}</td>
-                <td style="padding: 10px;">$${parseFloat(op.price).toFixed(2)}</td>
-                <td style="padding: 10px;">$${parseFloat(op.commission || 0).toFixed(2)}</td>
-                <td style="padding: 10px;">${op.e_x}</td>
-            </tr>
-        `;
-    });
+        html += 
+            '<tr>' +
+            '<td style="padding: 10px;">' + timeStr + '</td>' +
+            '<td style="padding: 10px;">' + op.action + '</td>' +
+            '<td style="padding: 10px;">' + parseFloat(op.quantity).toFixed(2) + '</td>' +
+            '<td style="padding: 10px;">$' + parseFloat(op.price).toFixed(2) + '</td>' +
+            '<td style="padding: 10px;">$' + parseFloat(op.commission || 0).toFixed(2) + '</td>' +
+            '<td style="padding: 10px;">' + op.e_x + '</td>' +
+            '</tr>';
+    }
     
     document.getElementById('detailOperations').innerHTML = html;
 }
@@ -435,6 +522,7 @@ function closeTradeDetails() {
     selectedTrade = null;
 }
 
-window.addEventListener('load', () => {
+window.addEventListener('load', function() {
+    console.log('🚀 Página carregada');
     initSupabase();
 });
