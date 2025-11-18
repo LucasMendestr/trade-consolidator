@@ -1,4 +1,4 @@
-// Variáveis globais
+/ Variáveis globais
 let supabaseClient = null;
 let currentUser = null;
 let currentSession = null;
@@ -123,11 +123,56 @@ async function handleFileUpload(event) {
     reader.readAsText(file);
 }
 
+// Função para verificar duplicidade completa
+async function isDuplicateOperation(operation) {
+    try {
+        // Converter valores para os mesmos tipos que estão no banco
+        const quantity = parseFloat(operation.Quantity.replace('.', '').replace(',', '.'));
+        const price = parseFloat(operation.Price.replace('.', '').replace(',', '.'));
+        const commission = parseFloat((operation.Commission || '0').replace('$', '').replace(',', '.'));
+        const operationTime = new Date(operation.Time).toISOString();
+
+        // Buscar operações no banco que correspondem a estes critérios
+        const { data: existing } = await supabaseClient
+            .from('operations')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .eq('instrument', operation.Instrument)
+            .eq('action', operation.Action)
+            .eq('account', operation.Account)
+            .eq('e_x', operation['E/X']);
+
+        if (!existing || existing.length === 0) {
+            return false; // Não é duplicada
+        }
+
+        // Verificar se alguma operação tem TODOS os campos exatamente iguais
+        for (let op of existing) {
+            const isSameTime = new Date(op.time).toISOString() === operationTime;
+            const isSameQuantity = Math.abs(parseFloat(op.quantity) - quantity) < 0.0001;
+            const isSamePrice = Math.abs(parseFloat(op.price) - price) < 0.0001;
+            const isSameCommission = Math.abs(parseFloat(op.commission || 0) - commission) < 0.0001;
+            const isSamePosition = op.position === operation.Position;
+
+            // Se TODOS os campos são iguais, é duplicada
+            if (isSameTime && isSameQuantity && isSamePrice && isSameCommission && isSamePosition) {
+                return true;
+            }
+        }
+
+        return false;
+
+    } catch (err) {
+        console.error('Erro verificação duplicidade:', err);
+        return false;
+    }
+}
+
 async function processCSV(csv) {
     const lines = csv.split('\n');
     const headers = lines[0].split(';').map(h => h.trim());
     
-    let imported = 0, duplicates = 0;
+    let imported = 0, duplicates = 0, errors = 0;
 
     document.getElementById('uploadMessage').innerHTML = 
         '<div class="loading">⏳ Importando...</div>';
@@ -143,16 +188,11 @@ async function processCSV(csv) {
                 operation[h] = values[idx];
             });
 
-            const ninjaId = `${operation.Instrument}-${operation.Time}-${operation.Action}-${operation.Quantity}-${operation.Price}`;
-
-            const { data: existing } = await supabaseClient
-                .from('operations')
-                .select('id')
-                .eq('user_id', currentUser.id)
-                .eq('ninja_id', ninjaId)
-                .limit(1);
-
-            if (existing && existing.length > 0) {
+            // VERIFICAR DUPLICIDADE COMPLETA
+            const isDuplicate = await isDuplicateOperation(operation);
+            
+            if (isDuplicate) {
+                console.log('⚠️ Duplicada encontrada:', operation.Instrument, operation.Time);
                 duplicates++;
                 continue;
             }
@@ -165,7 +205,6 @@ async function processCSV(csv) {
                 .from('operations')
                 .insert([{
                     user_id: currentUser.id,
-                    ninja_id: ninjaId,
                     instrument: operation.Instrument,
                     action: operation.Action,
                     quantity: quantity,
@@ -179,15 +218,19 @@ async function processCSV(csv) {
 
             if (!error) {
                 imported++;
+            } else {
+                errors++;
+                console.error('Erro insert:', error.message);
             }
 
         } catch (err) {
+            errors++;
             console.error('Erro linha:', err);
         }
     }
 
     document.getElementById('uploadMessage').innerHTML = 
-        `<div class="success">✅ ${imported} importadas, ${duplicates} duplicatas</div>`;
+        `<div class="success">✅ ${imported} importadas, ${duplicates} duplicatas, ${errors} erros</div>`;
 
     await loadDataFromSupabase();
 }
