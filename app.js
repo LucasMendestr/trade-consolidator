@@ -140,6 +140,37 @@ async function handleFileUpload(event) {
     reader.readAsText(file);
 }
 
+async function deleteAllTransactions() {
+    if (!confirm('⚠️ Tem certeza que deseja EXCLUIR TODAS as transações? Essa ação não pode ser desfeita!')) {
+        return;
+    }
+
+    try {
+        console.log('🗑️ Deletando todas as transações...');
+        document.getElementById('uploadMessage').innerHTML = '<div class="loading">⏳ Deletando...</div>';
+
+        const result = await supabaseClient
+            .from('operations')
+            .delete()
+            .eq('user_id', currentUser.id);
+
+        if (result.error) throw result.error;
+
+        console.log('✅ Todas as transações foram deletadas');
+        showMessage('success', '✅ Todas as transações foram excluídas com sucesso!');
+        
+        allTrades = [];
+        allOperations = [];
+        document.getElementById('uploadMessage').innerHTML = '';
+        await loadDataFromSupabase();
+        
+    } catch (err) {
+        console.error('Erro delete:', err);
+        showMessage('error', 'Erro ao deletar: ' + err.message);
+        document.getElementById('uploadMessage').innerHTML = '';
+    }
+}
+
 async function isDuplicateOperation(operation) {
     try {
         const quantity = parseFloat(operation.Quantity.replace('.', '').replace(',', '.'));
@@ -270,6 +301,10 @@ async function loadDataFromSupabase() {
             calculateAndDisplayTrades(operations);
         } else {
             console.log('ℹ️ Nenhuma operação');
+            allTrades = [];
+            populateAccountFilter();
+            filterTrades();
+            updateDashboard();
         }
     } catch (err) {
         console.error('Erro carregamento:', err);
