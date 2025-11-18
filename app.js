@@ -304,6 +304,7 @@ function calculateAndDisplayTrades(operations) {
                         exits: [],
                         account: op.account,
                         startTime: op.time,
+                        endTime: null,
                         status: 'Open'
                     };
                 }
@@ -438,6 +439,12 @@ function updateDashboard() {
         '<div class="stat-card"><div class="stat-label">Losses</div><div class="stat-value">' + losses + '</div></div>';
 }
 
+function formatDate(dateString) {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleString('pt-BR');
+}
+
 function updateTradesTable() {
     let tableHtml = '';
     
@@ -445,6 +452,7 @@ function updateTradesTable() {
         const t = filteredTrades[i];
         const statusClass = t.status === 'Closed' ? 'status-closed' : 'status-open';
         const pnlClass = parseFloat(t.pnlDollars || 0) >= 0 ? 'pnl-positive' : 'pnl-negative';
+        const endTimeFormatted = formatDate(t.endTime);
         
         tableHtml += 
             '<tr onclick="showTradeDetails(' + i + ')" style="cursor: pointer;">' +
@@ -456,12 +464,13 @@ function updateTradesTable() {
             '<td>$' + (t.avgExit || '-') + '</td>' +
             '<td>' + (t.pnlPoints || '-') + '</td>' +
             '<td class="' + pnlClass + '">$' + (t.pnlDollars || '-') + '</td>' +
+            '<td style="font-size: 12px; color: #666;">' + endTimeFormatted + '</td>' +
             '</tr>';
     }
 
     const tradesBody = document.getElementById('tradesBody');
     if (tableHtml === '') {
-        tradesBody.innerHTML = '<tr><td colspan="8" class="loading">Nenhum trade</td></tr>';
+        tradesBody.innerHTML = '<tr><td colspan="9" class="loading">Nenhum trade</td></tr>';
     } else {
         tradesBody.innerHTML = tableHtml;
     }
