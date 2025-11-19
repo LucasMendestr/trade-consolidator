@@ -160,21 +160,44 @@ async function deleteAllTransactions() {
         console.log('🗑️ Deletando todas as transações...');
         document.getElementById('uploadMessage').innerHTML = '<div class="loading">⏳ Deletando...</div>';
 
-        const result = await supabaseClient
+        // Primeiro, busca todas as operações do usuário
+        const getAllResult = await supabaseClient
+            .from('operations')
+            .select('id')
+            .eq('user_id', currentUser.id);
+
+        if (getAllResult.error) throw getAllResult.error;
+
+        const operationIds = getAllResult.data;
+        console.log('📊 Encontradas ' + operationIds.length + ' operações para deletar');
+
+        if (operationIds.length === 0) {
+            console.log('ℹ️ Nenhuma operação para deletar');
+            showMessage('success', 'Nenhuma transação para excluir');
+            document.getElementById('uploadMessage').innerHTML = '';
+            return;
+        }
+
+        // Delete usando a query builder correto
+        const deleteResult = await supabaseClient
             .from('operations')
             .delete()
             .eq('user_id', currentUser.id)
             .select('id');
 
-        if (result.error) throw result.error;
+        if (deleteResult.error) {
+            console.error('❌ Erro delete:', deleteResult.error);
+            throw deleteResult.error;
+        }
 
         console.log('✅ Todas as transações foram deletadas');
-        const count = result.data ? result.data.length : 0;
-        showMessage('success', '✅ ' + count + ' transações excluídas com sucesso!');
+        showMessage('success', '✅ Todas as transações foram excluídas com sucesso!');
         
         allTrades = [];
         allOperations = [];
         document.getElementById('uploadMessage').innerHTML = '';
+        
+        // Recarrega a interface
         await loadDataFromSupabase();
         
     } catch (err) {
