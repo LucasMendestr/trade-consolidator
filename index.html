@@ -175,6 +175,16 @@
                 </select>
             </div>
 
+            <div class="upload-section" id="strategiesSection" style="margin-top: 10px;">
+                <h3 style="margin: 0 0 10px 0;">🧠 Estratégias</h3>
+                <div class="form-group"><label>Nome</label><input type="text" id="strategyName"></div>
+                <div class="form-group"><label>Timeframe</label><input type="text" id="strategyTimeframe"></div>
+                <div class="form-group"><label>Risco/Recompensa Esperado</label><input type="number" id="strategyRR" step="0.01"></div>
+                <div class="form-group"><label>Descrição</label><input type="text" id="strategyDescription"></div>
+                <button class="btn btn-primary" onclick="handleCreateStrategy()">Criar Estratégia</button>
+                <div id="strategyMessage" style="margin-top:8px;"></div>
+            </div>
+
             <!-- TRADES TABLE -->
             <h2>📋 Trades (Clique em um trade para ver detalhes)</h2>
             <div style="overflow-x: auto;">
@@ -190,10 +200,11 @@
                             <th>Pontos</th>
                             <th>PnL $</th>
                             <th>Fechamento</th>
+                            <th>Estratégia</th>
                         </tr>
                     </thead>
                     <tbody id="tradesBody">
-                        <tr><td colspan="9" class="loading">Nenhum trade</td></tr>
+                        <tr><td colspan="10" class="loading">Nenhum trade</td></tr>
                     </tbody>
                 </table>
             </div>
