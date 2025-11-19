@@ -452,14 +452,15 @@ function calculateAndDisplayTrades(operations) {
 function populateAccountFilter() {
     const accounts = [];
     for (let i = 0; i < allTrades.length; i++) {
-        if (accounts.indexOf(allTrades[i].account) === -1) {
-            accounts.push(allTrades[i].account);
+        const acc = (allTrades[i].account || '').trim();
+        if (acc && accounts.indexOf(acc) === -1) {
+            accounts.push(acc);
         }
     }
     accounts.sort();
 
     const filter = document.getElementById('accountFilter');
-    const currentValue = filter.value;
+    const currentValue = (filter.value || '').trim();
     
     filter.innerHTML = '<option value="">Todas as contas</option>';
     for (let i = 0; i < accounts.length; i++) {
@@ -470,16 +471,18 @@ function populateAccountFilter() {
 }
 
 function filterTrades() {
-    const accountFilter = document.getElementById('accountFilter').value;
+    const accountFilter = (document.getElementById('accountFilter').value || '').trim();
     
     filteredTrades = [];
     for (let i = 0; i < allTrades.length; i++) {
         const t = allTrades[i];
-        if (accountFilter && t.account !== accountFilter) continue;
+        const acc = (t.account || '').trim();
+        if (accountFilter && acc !== accountFilter) continue;
         filteredTrades.push(t);
     }
 
     updateTradesTable();
+    updateDashboard();
 }
 
 function updateDashboard() {
