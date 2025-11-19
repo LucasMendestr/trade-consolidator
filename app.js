@@ -160,44 +160,21 @@ async function deleteAllTransactions() {
         console.log('🗑️ Deletando todas as transações...');
         document.getElementById('uploadMessage').innerHTML = '<div class="loading">⏳ Deletando...</div>';
 
-        // Primeiro, busca todas as operações do usuário
-        const getAllResult = await supabaseClient
-            .from('operations')
-            .select('id')
-            .eq('user_id', currentUser.id);
-
-        if (getAllResult.error) throw getAllResult.error;
-
-        const operationIds = getAllResult.data;
-        console.log('📊 Encontradas ' + operationIds.length + ' operações para deletar');
-
-        if (operationIds.length === 0) {
-            console.log('ℹ️ Nenhuma operação para deletar');
-            showMessage('success', 'Nenhuma transação para excluir');
-            document.getElementById('uploadMessage').innerHTML = '';
-            return;
-        }
-
-        // Delete usando a query builder correto
-        const deleteResult = await supabaseClient
+        const result = await supabaseClient
             .from('operations')
             .delete()
             .eq('user_id', currentUser.id)
             .select('id');
 
-        if (deleteResult.error) {
-            console.error('❌ Erro delete:', deleteResult.error);
-            throw deleteResult.error;
-        }
+        if (result.error) throw result.error;
 
         console.log('✅ Todas as transações foram deletadas');
-        showMessage('success', '✅ Todas as transações foram excluídas com sucesso!');
+        const count = result.data ? result.data.length : 0;
+        showMessage('success', '✅ ' + count + ' transações excluídas com sucesso!');
         
         allTrades = [];
         allOperations = [];
         document.getElementById('uploadMessage').innerHTML = '';
-        
-        // Recarrega a interface
         await loadDataFromSupabase();
         
     } catch (err) {
@@ -452,15 +429,14 @@ function calculateAndDisplayTrades(operations) {
 function populateAccountFilter() {
     const accounts = [];
     for (let i = 0; i < allTrades.length; i++) {
-        const acc = (allTrades[i].account || '').trim();
-        if (acc && accounts.indexOf(acc) === -1) {
-            accounts.push(acc);
+        if (accounts.indexOf(allTrades[i].account) === -1) {
+            accounts.push(allTrades[i].account);
         }
     }
     accounts.sort();
 
     const filter = document.getElementById('accountFilter');
-    const currentValue = (filter.value || '').trim();
+    const currentValue = filter.value;
     
     filter.innerHTML = '<option value="">Todas as contas</option>';
     for (let i = 0; i < accounts.length; i++) {
@@ -471,49 +447,44 @@ function populateAccountFilter() {
 }
 
 function filterTrades() {
-    const accountFilter = (document.getElementById('accountFilter').value || '').trim();
+    const accountFilter = document.getElementById('accountFilter').value;
     
     filteredTrades = [];
     for (let i = 0; i < allTrades.length; i++) {
         const t = allTrades[i];
-        const acc = (t.account || '').trim();
-        if (accountFilter && acc !== accountFilter) continue;
+        if (accountFilter && t.account !== accountFilter) continue;
         filteredTrades.push(t);
     }
 
     updateTradesTable();
-    updateDashboard();
 }
 
 function updateDashboard() {
-    let totalTrades = filteredTrades.length;
+    let closedCount = 0;
+    let openCount = 0;
     let totalPnL = 0;
     let wins = 0;
     let losses = 0;
-    let sumProfit = 0;
-    let sumLoss = 0;
 
     for (let i = 0; i < filteredTrades.length; i++) {
         const t = filteredTrades[i];
+        if (t.status === 'Closed') closedCount++;
+        if (t.status === 'Open') openCount++;
+        
         const pnl = parseFloat(t.pnlDollars || 0);
         totalPnL += pnl;
-        if (pnl > 0) { wins++; sumProfit += pnl; }
-        if (pnl < 0) { losses++; sumLoss += Math.abs(pnl); }
+        if (pnl > 0) wins++;
+        if (pnl < 0) losses++;
     }
 
     const pnlColor = totalPnL >= 0 ? '#4CAF50' : '#f44336';
-    const profitFactor = sumLoss > 0 ? (sumProfit / sumLoss) : null;
-    const payoffFactor = (wins > 0 && losses > 0) ? ((sumProfit / wins) / (sumLoss / losses)) : null;
-    const hitRate = (wins + losses) > 0 ? (wins / (wins + losses)) : 0;
-
+    
     document.getElementById('statsGrid').innerHTML = 
-        '<div class="stat-card"><div class="stat-label">Total de Trades</div><div class="stat-value">' + totalTrades + '</div></div>' +
-        '<div class="stat-card"><div class="stat-label">Wins</div><div class="stat-value">' + wins + '</div></div>' +
-        '<div class="stat-card"><div class="stat-label">Losses</div><div class="stat-value">' + losses + '</div></div>' +
+        '<div class="stat-card"><div class="stat-label">Trades Fechados</div><div class="stat-value">' + closedCount + '</div></div>' +
+        '<div class="stat-card"><div class="stat-label">Abertos</div><div class="stat-value">' + openCount + '</div></div>' +
         '<div class="stat-card"><div class="stat-label">PnL Total</div><div class="stat-value" style="color: ' + pnlColor + '">$' + totalPnL.toFixed(2) + '</div></div>' +
-        '<div class="stat-card"><div class="stat-label">Profit Factor</div><div class="stat-value">' + (profitFactor !== null ? profitFactor.toFixed(2) : '-') + '</div></div>' +
-        '<div class="stat-card"><div class="stat-label">Payoff Factor</div><div class="stat-value">' + (payoffFactor !== null ? payoffFactor.toFixed(2) : '-') + '</div></div>' +
-        '<div class="stat-card"><div class="stat-label">Taxa de Acerto</div><div class="stat-value">' + (hitRate * 100).toFixed(2) + '%</div></div>';
+        '<div class="stat-card"><div class="stat-label">Wins</div><div class="stat-value">' + wins + '</div></div>' +
+        '<div class="stat-card"><div class="stat-label">Losses</div><div class="stat-value">' + losses + '</div></div>';
 }
 
 function formatDate(dateString) {
@@ -608,30 +579,7 @@ function closeTradeDetails() {
     selectedTrade = null;
 }
 
-function setTheme(theme) {
-    const body = document.body;
-    body.classList.remove('theme-light', 'theme-dark');
-    if (theme === 'dark') { body.classList.add('theme-dark'); } else { body.classList.add('theme-light'); }
-    try {
-        localStorage.setItem('theme', theme);
-    } catch (e) {}
-    const radios = document.querySelectorAll('input[name="theme"]');
-    for (let i = 0; i < radios.length; i++) {
-        radios[i].checked = radios[i].value === theme;
-    }
-}
-
-function initThemeFromStorage() {
-    let theme = 'light';
-    try {
-        const saved = localStorage.getItem('theme');
-        if (saved) theme = saved;
-    } catch (e) {}
-    setTheme(theme);
-}
-
 window.addEventListener('load', function() {
     console.log('🚀 Página carregada');
     initSupabase();
-    initThemeFromStorage();
 });

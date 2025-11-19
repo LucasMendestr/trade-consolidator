@@ -156,6 +156,26 @@
             <h2>📈 Estatísticas</h2>
             <div class="stats-grid" id="statsGrid"></div>
 
+            <!-- CHARTS -->
+            <h2>📉 Gráficos</h2>
+            <div id="chartsSection" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+                <div style="background: var(--card-bg); padding: 15px; border-radius: 8px;"><strong>PnL Diário Acumulado</strong><canvas id="chartDailyCumulative" height="140"></canvas></div>
+                <div style="background: var(--card-bg); padding: 15px; border-radius: 8px;"><strong>PnL por Instrumento</strong><canvas id="chartPnlInstrument" height="140"></canvas></div>
+                <div style="background: var(--card-bg); padding: 15px; border-radius: 8px;"><strong>Trades Positivos vs Negativos</strong><canvas id="chartPosNeg" height="140"></canvas></div>
+                <div style="background: var(--card-bg); padding: 15px; border-radius: 8px;"><strong>Win Rate Acumulado</strong><canvas id="chartWinRateCumulative" height="140"></canvas></div>
+                <div style="background: var(--card-bg); padding: 15px; border-radius: 8px;"><strong>PnL Diário</strong><canvas id="chartDailyBar" height="140"></canvas></div>
+            </div>
+
+            <!-- CHARTS -->
+            <h2>📉 Gráficos</h2>
+            <div id="chartsSection" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+                <div style="background: var(--card-bg); padding: 15px; border-radius: 8px;"><strong>PnL Diário Acumulado</strong><canvas id="chartDailyCumulative" height="140"></canvas></div>
+                <div style="background: var(--card-bg); padding: 15px; border-radius: 8px;"><strong>PnL por Instrumento</strong><canvas id="chartPnlInstrument" height="140"></canvas></div>
+                <div style="background: var(--card-bg); padding: 15px; border-radius: 8px;"><strong>Trades Positivos vs Negativos</strong><canvas id="chartPosNeg" height="140"></canvas></div>
+                <div style="background: var(--card-bg); padding: 15px; border-radius: 8px;"><strong>Win Rate Acumulado</strong><canvas id="chartWinRateCumulative" height="140"></canvas></div>
+                <div style="background: var(--card-bg); padding: 15px; border-radius: 8px;"><strong>PnL Diário</strong><canvas id="chartDailyBar" height="140"></canvas></div>
+            </div>
+
             <!-- FILTRO -->
             <div class="filter-section">
                 <label>🏦 Filtrar por Conta:</label>
