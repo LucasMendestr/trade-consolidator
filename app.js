@@ -480,34 +480,136 @@ function filterTrades() {
     }
 
     updateTradesTable();
+    updateDashboard();
 }
 
 function updateDashboard() {
-    let closedCount = 0;
-    let openCount = 0;
+    let totalTrades = filteredTrades.length;
     let totalPnL = 0;
     let wins = 0;
     let losses = 0;
+    let sumProfit = 0;
+    let sumLoss = 0;
 
     for (let i = 0; i < filteredTrades.length; i++) {
         const t = filteredTrades[i];
-        if (t.status === 'Closed') closedCount++;
-        if (t.status === 'Open') openCount++;
-        
         const pnl = parseFloat(t.pnlDollars || 0);
         totalPnL += pnl;
-        if (pnl > 0) wins++;
-        if (pnl < 0) losses++;
+        if (pnl > 0) { wins++; sumProfit += pnl; }
+        if (pnl < 0) { losses++; sumLoss += Math.abs(pnl); }
     }
 
     const pnlColor = totalPnL >= 0 ? '#4CAF50' : '#f44336';
-    
+    const profitFactor = sumLoss > 0 ? (sumProfit / sumLoss) : null;
+    const payoffFactor = (wins > 0 && losses > 0) ? ((sumProfit / wins) / (sumLoss / losses)) : null;
+    const hitRate = (wins + losses) > 0 ? (wins / (wins + losses)) : 0;
+
     document.getElementById('statsGrid').innerHTML = 
-        '<div class="stat-card"><div class="stat-label">Trades Fechados</div><div class="stat-value">' + closedCount + '</div></div>' +
-        '<div class="stat-card"><div class="stat-label">Abertos</div><div class="stat-value">' + openCount + '</div></div>' +
-        '<div class="stat-card"><div class="stat-label">PnL Total</div><div class="stat-value" style="color: ' + pnlColor + '">$' + totalPnL.toFixed(2) + '</div></div>' +
+        '<div class="stat-card"><div class="stat-label">Total de Trades</div><div class="stat-value">' + totalTrades + '</div></div>' +
         '<div class="stat-card"><div class="stat-label">Wins</div><div class="stat-value">' + wins + '</div></div>' +
-        '<div class="stat-card"><div class="stat-label">Losses</div><div class="stat-value">' + losses + '</div></div>';
+        '<div class="stat-card"><div class="stat-label">Losses</div><div class="stat-value">' + losses + '</div></div>' +
+        '<div class="stat-card"><div class="stat-label">PnL Total</div><div class="stat-value" style="color: ' + pnlColor + '">
+
+function formatDate(dateString) {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleString('pt-BR');
+}
+
+function updateTradesTable() {
+    let tableHtml = '';
+    
+    for (let i = 0; i < filteredTrades.length; i++) {
+        const t = filteredTrades[i];
+        const statusClass = t.status === 'Closed' ? 'status-closed' : 'status-open';
+        const pnlClass = parseFloat(t.pnlDollars || 0) >= 0 ? 'pnl-positive' : 'pnl-negative';
+        const endTimeFormatted = formatDate(t.endTime);
+        
+        tableHtml += 
+            '<tr onclick="showTradeDetails(' + i + ')" style="cursor: pointer;">' +
+            '<td><span class="' + statusClass + '">' + t.status + '</span></td>' +
+            '<td>' + t.account + '</td>' +
+            '<td>' + t.instrument + '</td>' +
+            '<td>' + t.type + '</td>' +
+            '<td>$' + t.avgEntry + '</td>' +
+            '<td>$' + (t.avgExit || '-') + '</td>' +
+            '<td>' + (t.pnlPoints || '-') + '</td>' +
+            '<td class="' + pnlClass + '">$' + (t.pnlDollars || '-') + '</td>' +
+            '<td style="font-size: 12px; color: #666;">' + endTimeFormatted + '</td>' +
+            '</tr>';
+    }
+
+    const tradesBody = document.getElementById('tradesBody');
+    if (tableHtml === '') {
+        tradesBody.innerHTML = '<tr><td colspan="9" class="loading">Nenhum trade</td></tr>';
+    } else {
+        tradesBody.innerHTML = tableHtml;
+    }
+}
+
+function showTradeDetails(idx) {
+    selectedTrade = filteredTrades[idx];
+    document.getElementById('tradeDetails').style.display = 'block';
+    
+    document.getElementById('detailInstrument').textContent = selectedTrade.instrument;
+    document.getElementById('detailType').textContent = selectedTrade.type;
+    document.getElementById('detailStatus').textContent = selectedTrade.status;
+    document.getElementById('detailAccount').textContent = selectedTrade.account;
+    document.getElementById('detailAvgEntry').textContent = selectedTrade.avgEntry;
+    document.getElementById('detailAvgExit').textContent = selectedTrade.avgExit || '-';
+    
+    const pnlValue = parseFloat(selectedTrade.pnlDollars || 0);
+    const pnlColor = pnlValue >= 0 ? '#4CAF50' : '#f44336';
+    document.getElementById('detailPnL').innerHTML = '<span style="color: ' + pnlColor + ';">$' + selectedTrade.pnlDollars + '</span>';
+    
+    populateOperationsTable();
+    window.scrollTo(0, document.getElementById('tradeDetails').offsetTop - 100);
+}
+
+function populateOperationsTable() {
+    const allOps = [];
+    for (let i = 0; i < selectedTrade.entries.length; i++) {
+        allOps.push(selectedTrade.entries[i]);
+    }
+    for (let i = 0; i < selectedTrade.exits.length; i++) {
+        allOps.push(selectedTrade.exits[i]);
+    }
+    
+    allOps.sort(function(a, b) {
+        return new Date(a.time) - new Date(b.time);
+    });
+    
+    let html = '';
+    for (let i = 0; i < allOps.length; i++) {
+        const op = allOps[i];
+        const timeStr = new Date(op.time).toLocaleString('pt-BR');
+        html += 
+            '<tr>' +
+            '<td style="padding: 10px;">' + timeStr + '</td>' +
+            '<td style="padding: 10px;">' + op.action + '</td>' +
+            '<td style="padding: 10px;">' + parseFloat(op.quantity).toFixed(2) + '</td>' +
+            '<td style="padding: 10px;">$' + parseFloat(op.price).toFixed(2) + '</td>' +
+            '<td style="padding: 10px;">$' + parseFloat(op.commission || 0).toFixed(2) + '</td>' +
+            '<td style="padding: 10px;">' + op.e_x + '</td>' +
+            '</tr>';
+    }
+    
+    document.getElementById('detailOperations').innerHTML = html;
+}
+
+function closeTradeDetails() {
+    document.getElementById('tradeDetails').style.display = 'none';
+    selectedTrade = null;
+}
+
+window.addEventListener('load', function() {
+    console.log('🚀 Página carregada');
+    initSupabase();
+});
+ + totalPnL.toFixed(2) + '</div></div>' +
+        '<div class="stat-card"><div class="stat-label">Profit Factor</div><div class="stat-value">' + (profitFactor !== null ? profitFactor.toFixed(2) : '-') + '</div></div>' +
+        '<div class="stat-card"><div class="stat-label">Payoff Factor</div><div class="stat-value">' + (payoffFactor !== null ? payoffFactor.toFixed(2) : '-') + '</div></div>' +
+        '<div class="stat-card"><div class="stat-label">Taxa de Acerto</div><div class="stat-value">' + (hitRate * 100).toFixed(2) + '%</div></div>';
 }
 
 function formatDate(dateString) {
