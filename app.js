@@ -141,23 +141,36 @@ async function handleFileUpload(event) {
 }
 
 async function deleteAllTransactions() {
+    if (!supabaseClient) {
+        showMessage('error', 'Supabase não inicializado');
+        return;
+    }
     if (!confirm('⚠️ Tem certeza que deseja EXCLUIR TODAS as transações? Essa ação não pode ser desfeita!')) {
         return;
     }
 
     try {
+        if (!currentUser) {
+            const r = await supabaseClient.auth.getUser();
+            if (r.error) throw r.error;
+            currentUser = r.data.user;
+            if (!currentUser) throw new Error('Usuário não autenticado');
+        }
+
         console.log('🗑️ Deletando todas as transações...');
         document.getElementById('uploadMessage').innerHTML = '<div class="loading">⏳ Deletando...</div>';
 
         const result = await supabaseClient
             .from('operations')
             .delete()
-            .eq('user_id', currentUser.id);
+            .eq('user_id', currentUser.id)
+            .select('id');
 
         if (result.error) throw result.error;
 
         console.log('✅ Todas as transações foram deletadas');
-        showMessage('success', '✅ Todas as transações foram excluídas com sucesso!');
+        const count = result.data ? result.data.length : 0;
+        showMessage('success', '✅ ' + count + ' transações excluídas com sucesso!');
         
         allTrades = [];
         allOperations = [];
