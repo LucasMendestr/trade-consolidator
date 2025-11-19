@@ -75,6 +75,13 @@
         .loading { text-align: center; padding: 20px; color: #666; }
         h2 { margin: 20px 0 15px 0; font-size: 20px; color: #333; }
         h3 { margin: 15px 0 10px 0; font-size: 16px; color: #333; }
+        :root { --bg:#ffffff; --text:#222; --card-bg:#f9f9f9; --accent-purple:#6a5acd; --accent-lime:#a6f400; --header-bg:#ffffff; }
+        .theme-light { --bg:#ffffff; --text:#222; --card-bg:#f9f9f9; --accent-purple:#6a5acd; --accent-lime:#a6f400; --header-bg:#ffffff; }
+        .theme-dark  { --bg:#0f1115; --text:#eaeef2; --card-bg:#161a22; --accent-purple:#7c4dff; --accent-lime:#aeea00; --header-bg:#0f1115; }
+        body { background: var(--bg); color: var(--text); }
+        .app-container { background: var(--header-bg); }
+        .filter-section, .upload-section { background: var(--card-bg); }
+        .stat-card { background: linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-lime) 100%); color: white; }
     </style>
 </head>
 <body>
@@ -122,6 +129,11 @@
                 <h1>📊 Trade Consolidator Pro</h1>
                 <div class="user-section">
                     <p>Email: <strong id="userEmail"></strong></p>
+                    <div style="margin: 8px 0;">
+                        <label style="margin-right:8px;">Tema:</label>
+                        <label style="margin-right:10px;"><input type="radio" name="theme" value="light" onchange="setTheme('light')"> Claro</label>
+                        <label><input type="radio" name="theme" value="dark" onchange="setTheme('dark')"> Escuro</label>
+                    </div>
                     <button class="btn btn-secondary" onclick="handleLogout()" style="width: 150px; margin-top: 10px;">Sair</button>
                 </div>
             </div>
