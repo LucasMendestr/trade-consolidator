@@ -312,7 +312,7 @@ async function loadDataFromSupabase() {
         if (operations && operations.length > 0) {
             allOperations = operations;
             console.log('📊 ' + operations.length + ' operações');
-            calculateAndDisplayTrades(operations);
+            await calculateAndDisplayTrades(operations);
         } else {
             console.log('ℹ️ Nenhuma operação');
             allTrades = [];
@@ -325,12 +325,75 @@ async function loadDataFromSupabase() {
     }
 }
 
-function calculateAndDisplayTrades(operations) {
+async function saveTradeAndLinkOperations(trade) {
+    if (!supabaseClient) return;
+    if (!currentUser) {
+        const r = await supabaseClient.auth.getUser();
+        if (r.error) return;
+        currentUser = r.data.user;
+        if (!currentUser) return;
+    }
+    const entryQty = trade.entries.reduce(function(s, e) { return s + parseFloat(e.quantity || 0); }, 0);
+    const exitQty = trade.exits.reduce(function(s, e) { return s + parseFloat(e.quantity || 0); }, 0);
+    let totalComm = 0;
+    for (let i = 0; i < trade.entries.length; i++) { totalComm += parseFloat(trade.entries[i].commission || 0); }
+    for (let i = 0; i < trade.exits.length; i++) { totalComm += parseFloat(trade.exits[i].commission || 0); }
+    const startIso = new Date(trade.startTime).toISOString();
+    const endIso = new Date(trade.endTime).toISOString();
+    let tradeId = null;
+    const dup = await supabaseClient
+        .from('trades')
+        .select('id')
+        .eq('user_id', currentUser.id)
+        .eq('instrument', trade.instrument)
+        .eq('account', trade.account)
+        .eq('type', trade.type)
+        .eq('start_time', startIso)
+        .eq('end_time', endIso)
+        .limit(1);
+    if (dup.data && dup.data.length > 0) {
+        tradeId = dup.data[0].id;
+    } else {
+        const ins = await supabaseClient
+            .from('trades')
+            .insert([{
+                user_id: currentUser.id,
+                instrument: trade.instrument,
+                account: trade.account,
+                type: trade.type,
+                start_time: startIso,
+                end_time: endIso,
+                status: trade.status,
+                avg_price_entry: parseFloat(trade.avgEntry),
+                avg_price_exit: parseFloat(trade.avgExit),
+                total_qty_entry: entryQty,
+                total_qty_exit: exitQty,
+                pnl_points: parseFloat(trade.pnlPoints),
+                pnl_dollars: parseFloat(trade.pnlDollars),
+                total_commissions: totalComm
+            }])
+            .select('id')
+            .single();
+        if (ins.data) tradeId = ins.data.id;
+    }
+    if (tradeId) {
+        const opIds = trade.entries.concat(trade.exits).map(function(o) { return o.id; });
+        if (opIds.length > 0) {
+            await supabaseClient
+                .from('operations')
+                .update({ trade_id: tradeId })
+                .in('id', opIds)
+                .eq('user_id', currentUser.id);
+        }
+    }
+}
+
+async function calculateAndDisplayTrades(operations) {
     const grouped = {};
     
     for (let i = 0; i < operations.length; i++) {
         const op = operations[i];
-        const key = op.instrument;
+        const key = op.instrument + '|' + (op.account || '');
         if (!grouped[key]) grouped[key] = [];
         grouped[key].push(op);
     }
@@ -409,6 +472,7 @@ function calculateAndDisplayTrades(operations) {
                         tradeOpen.pnlDollars = pnlDollars.toFixed(2);
                         tradeOpen.endTime = op.time;
 
+                        await saveTradeAndLinkOperations(tradeOpen);
                         allTrades.push(tradeOpen);
                         tradeOpen = null;
                     }
