@@ -63,8 +63,6 @@ async function processCSV(csv) {
             let missing = [];
             for (let r = 0; r < required.length; r++) { if (!op[required[r]] || String(op[required[r]]).trim() === '') missing.push(required[r]); }
             if (missing.length > 0) { tracker.validation++; tracker.details.push({ line: i, type: 'validation', message: 'Campos ausentes: ' + missing.join(','), raw: raw }); continue; }
-            const isoTime = toIsoUTC(op.Time);
-            if (!isoTime) { tracker.time++; tracker.details.push({ line: i, type: 'time', message: 'Data/Hora inválida: ' + op.Time, raw: raw }); continue; }
             const qty = normalizeNumber(op.Quantity);
             const prc = normalizeNumber(op.Price);
             let com = normalizeNumber((op.Commission || '0').replace('$',''));
@@ -77,7 +75,7 @@ async function processCSV(csv) {
                 action: op.Action,
                 quantity: qty,
                 price: prc,
-                time: isoTime,
+                time: String(op.Time).trim(),
                 e_x: op['E/X'],
                 position: op.Position,
                 commission: com,
@@ -127,7 +125,7 @@ function makeOpKeyFromDb(op) {
     const q = parseFloat(op.quantity || 0).toFixed(6);
     const p = parseFloat(op.price || 0).toFixed(6);
     const c = parseFloat(op.commission || 0).toFixed(6);
-    const t = new Date(op.time).toISOString();
+    const t = String(op.time || '');
     return (op.instrument || '') + '|' + (op.action || '') + '|' + (op.account || '') + '|' + (op.e_x || '') + '|' + (op.position || '') + '|' + q + '|' + p + '|' + c + '|' + t;
 }
 
@@ -143,17 +141,18 @@ async function dedupAndInsertBatch(batch) {
             if (batch[i].instrument) instrumentsSet[batch[i].instrument] = true;
         }
         const instruments = Object.keys(instrumentsSet);
-        const minIso = new Date(minTime).toISOString();
-        const maxIso = new Date(maxTime).toISOString();
         let existingKeys = {};
+        const accountsSet = {};
+        for (let i = 0; i < batch.length; i++) { const acc = batch[i].account || ''; if (acc) accountsSet[acc] = true; }
+        const accounts = Object.keys(accountsSet);
         if (instruments.length > 0) {
-            const sel = await supabaseClient
+            let query = supabaseClient
                 .from('operations')
                 .select('instrument,action,account,e_x,position,quantity,price,commission,time')
                 .eq('user_id', currentUser.id)
-                .in('instrument', instruments)
-                .gte('time', minIso)
-                .lte('time', maxIso);
+                .in('instrument', instruments);
+            if (accounts.length > 0) { query = query.in('account', accounts); }
+            const sel = await query;
             const existing = sel.data || [];
             for (let i = 0; i < existing.length; i++) { existingKeys[makeOpKeyFromDb(existing[i])] = true; }
         }
