@@ -23,8 +23,8 @@ async function handleLogin() {
         currentUser = result.data.user;
         currentSession = result.data.session;
         showApp();
-        await loadDataFromSupabase();
-        await loadStrategies();
+        try { await loadDataFromSupabase(); await loadStrategies(); } catch (e) {}
+        window.location.href = 'dashboard.html';
     } catch (err) { showMessage('error', err.message); }
 }
 

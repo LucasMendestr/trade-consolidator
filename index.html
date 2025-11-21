@@ -75,13 +75,30 @@
         .loading { text-align: center; padding: 20px; color: #666; }
         h2 { margin: 20px 0 15px 0; font-size: 20px; color: #333; }
         h3 { margin: 15px 0 10px 0; font-size: 16px; color: #333; }
-        :root { --bg:#ffffff; --text:#222; --card-bg:#f9f9f9; --accent-purple:#6a5acd; --accent-lime:#a6f400; --header-bg:#ffffff; }
-        .theme-light { --bg:#ffffff; --text:#222; --card-bg:#f9f9f9; --accent-purple:#6a5acd; --accent-lime:#a6f400; --header-bg:#ffffff; }
-        .theme-dark  { --bg:#0f1115; --text:#eaeef2; --card-bg:#161a22; --accent-purple:#7c4dff; --accent-lime:#aeea00; --header-bg:#0f1115; }
+        :root { --bg:#f5f7fa; --text:#0f172a; --card-bg:#ffffff; --header-bg:#ffffff; --surface:#eef2f7; --primary:#0ea5e9; --accent-purple:#7c3aed; --accent-lime:#84cc16; --positive:#16a34a; --negative:#ef4444; --warning:#f59e0b; }
+        .theme-light { --bg:#f5f7fa; --text:#0f172a; --card-bg:#ffffff; --header-bg:#ffffff; --surface:#eef2f7; --primary:#0ea5e9; --accent-purple:#7c3aed; --accent-lime:#84cc16; --positive:#16a34a; --negative:#ef4444; --warning:#f59e0b; }
+        .theme-dark  { --bg:#0b1020; --text:#e5e7eb; --card-bg:#10162b; --header-bg:#0f1426; --surface:#0f1426; --primary:#38bdf8; --accent-purple:#8b5cf6; --accent-lime:#a3e635; --positive:#22c55e; --negative:#f43f5e; --warning:#fbbf24; }
         body { background: var(--bg); color: var(--text); }
         .app-container { background: var(--header-bg); }
         .filter-section, .upload-section { background: var(--card-bg); }
         .stat-card { background: linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-lime) 100%); color: white; }
+        .btn-primary { background: var(--primary); color: white; width: 100%; margin: 10px 0; }
+        .btn-primary:hover { filter: brightness(0.9); }
+        .btn-secondary { background: var(--surface); width: 100%; margin: 10px 0; }
+        .btn-secondary:hover { filter: brightness(0.95); }
+        .btn-danger { background: var(--negative); color: white; padding: 8px 15px; }
+        .btn-danger:hover { filter: brightness(0.9); }
+        .status-closed { background: rgba(34,197,94,0.15); color: var(--positive); padding: 5px 10px; border-radius: 4px; }
+        .status-open { background: rgba(245,158,11,0.15); color: var(--warning); padding: 5px 10px; border-radius: 4px; }
+        .pnl-positive { color: var(--positive); font-weight: bold; }
+        .pnl-negative { color: var(--negative); font-weight: bold; }
+        .close-btn { background: var(--negative); color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; }
+        .close-btn:hover { opacity: 0.9; }
+        table tbody tr:hover { background: var(--surface); }
+        .detail-item strong { color: var(--text); }
+        .detail-item span { color: var(--primary); }
+        .upload-area { border: 2px dashed var(--primary); background: var(--surface); }
+        .upload-area:hover { background: var(--card-bg); border-color: var(--primary); }
     </style>
 </head>
 <body>

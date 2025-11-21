@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload • Trade Consolidator</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --bg:#f5f7fa; --text:#0f172a; --card-bg:#ffffff; --primary:#0ea5e9; --surface:#eef2f7; }
+        body { font-family: Arial, sans-serif; background: var(--bg); color: var(--text); }
+        .app-container { background: var(--card-bg); padding: 30px; max-width: 800px; margin: 20px auto; border-radius: 8px; }
+        .app-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ddd; padding-bottom: 20px; margin-bottom: 20px; }
+        .upload-area { border: 2px dashed var(--primary); padding: 40px; text-align: center; border-radius: 8px; cursor: pointer; background: var(--surface); margin: 10px 0; transition: 0.3s; }
+        .upload-area:hover { background: var(--card-bg); border-color: var(--primary); }
+        .btn { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-danger { background: #ef4444; color: white; }
+        nav a { margin-right: 12px; color: var(--primary); text-decoration: none; font-weight: bold; }
+        nav a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="app-header">
+            <h1>📤 Upload CSV</h1>
+            <div>
+                <label style="margin-right:10px;"><input type="radio" name="theme" value="light" onchange="setTheme('light')"> Claro</label>
+                <label><input type="radio" name="theme" value="dark" onchange="setTheme('dark')"> Escuro</label>
+            </div>
+        </div>
+        <nav>
+            <a href="dashboard.html">Dashboard</a>
+            <a href="trades.html">Trades</a>
+            <a href="upload.html">Upload</a>
+            <a href="strategies.html">Estratégias</a>
+            <a href="settings.html">Configurações</a>
+        </nav>
+        <div class="upload-section" style="background: var(--card-bg); padding: 15px; border-radius: 8px;">
+            <div class="upload-area" onclick="document.getElementById('csvFile').click()">
+                <p>📁 Clique para selecionar arquivo CSV</p>
+                <p style="font-size: 12px; color: #999;">NinjaTrader Export</p>
+            </div>
+            <input type="file" id="csvFile" accept=".csv" onchange="handleFileUpload(event)" style="display: none;">
+            <div id="uploadMessage"></div>
+            <button class="btn btn-danger" onclick="deleteAllTransactions()">🗑️ Excluir Tudo</button>
+        </div>
+    </div>
+    <script src="globals.js"></script>
+    <script src="supabase-init.js"></script>
+    <script src="theme.js"></script>
+    <script src="operations.js"></script>
+    <script src="maintenance.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
