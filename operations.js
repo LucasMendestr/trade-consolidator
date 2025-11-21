@@ -48,5 +48,6 @@ async function processCSV(csv) {
         } catch (err) { errors++; }
     }
     document.getElementById('uploadMessage').innerHTML = '<div class="success">✅ ' + imported + ' importadas, ' + duplicates + ' duplicatas, ' + errors + ' erros</div>';
+    try { await consolidateTradesForUser(); } catch (e) {}
     await loadDataFromSupabase();
 }
