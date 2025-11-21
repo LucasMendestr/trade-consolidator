@@ -34,7 +34,7 @@ function toIsoUTC(s) { const d = new Date(s); return new Date(Date.UTC(d.getFull
 async function processCSV(csv) {
     const lines = csv.split(/\r?\n/);
     const headers = lines[0].split(';').map(function(h) { return h.trim(); });
-    let imported = 0; let errors = 0;
+    let imported = 0; let errors = 0; let duplicates = 0;
     const batchSize = 500; let batch = [];
     document.getElementById('uploadMessage').innerHTML = '<div class="loading">⏳ Importando...</div>';
     for (let i = 1; i < lines.length; i++) {
@@ -54,19 +54,20 @@ async function processCSV(csv) {
                 commission: normalizeNumber((op.Commission || '0').replace('$','')),
                 account: op.Account
             };
-            batch.push(row);
+            const isDup = await isDuplicateOperation(op);
+            if (isDup) { duplicates++; } else { batch.push(row); }
             if (batch.length >= batchSize) {
-                const res = await supabaseClient.from('operations').upsert(batch, { onConflict: 'user_id,digest' });
+                const res = await supabaseClient.from('operations').insert(batch).select('id');
                 if (res.error) { errors += batch.length; } else { imported += (res.data ? res.data.length : batch.length); }
                 batch = [];
             }
         } catch (err) { errors++; }
     }
     if (batch.length > 0) {
-        const res = await supabaseClient.from('operations').upsert(batch, { onConflict: 'user_id,digest' });
+        const res = await supabaseClient.from('operations').insert(batch).select('id');
         if (res.error) { errors += batch.length; } else { imported += (res.data ? res.data.length : batch.length); }
     }
-    document.getElementById('uploadMessage').innerHTML = '<div class="success">✅ ' + imported + ' processadas, ' + errors + ' erros</div>';
+    document.getElementById('uploadMessage').innerHTML = '<div class="success">✅ ' + imported + ' processadas, ' + duplicates + ' duplicatas, ' + errors + ' erros</div>';
     try { await consolidateTradesForUser(); } catch (e) {}
     await loadDataFromSupabase();
 }
