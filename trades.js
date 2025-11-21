@@ -336,6 +336,29 @@ async function consolidateTradesForUserBatch() {
             .in('id', u.opIds)
             .eq('user_id', currentUser.id);
     }
+    const insertedCount = Object.keys(tradeIdByKey).length;
+    let linkedOps = 0; for (let i = 0; i < updates.length; i++) { linkedOps += (updates[i].opIds || []).length; }
+    const summaryHtml = '<div class="success">✅ Trades consolidados: ' + insertedCount + ' inseridos, ' + (candidates.length - insertedCount) + ' duplicatas, ' + linkedOps + ' operações vinculadas</div>' +
+        '<div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">' +
+        '<button class="btn btn-secondary" onclick="toggleTradeErrors()">Ver detalhes da consolidação</button>' +
+        '<a id="downloadTradeErrors" class="btn btn-secondary" href="#" download="trade-consolidation-log.json">Baixar log</a>' +
+        '</div>' +
+        '<div id="tradeErrorsPanel" style="display:none; margin-top:10px; background: #1f2937; color:#e5e7eb; padding:10px; border-radius:4px; max-height:280px; overflow:auto;"></div>';
+    const msgEl = document.getElementById('uploadMessage');
+    if (msgEl) { const prev = msgEl.innerHTML; msgEl.innerHTML = prev + summaryHtml; }
+}
+
+function toggleTradeErrors() {
+    const panel = document.getElementById('tradeErrorsPanel');
+    if (!panel) return;
+    const visible = panel.style.display !== 'none';
+    if (visible) { panel.style.display = 'none'; return; }
+    panel.innerHTML = '<div>Nenhum detalhe adicional</div>';
+    panel.style.display = 'block';
+}
+
+function setTradeErrorsDownloadLink(tracker) {
+    try { const a = document.getElementById('downloadTradeErrors'); if (!a) return; const obj = tracker || {}; const blob = new Blob([JSON.stringify(obj)], { type: 'application/json' }); const url = URL.createObjectURL(blob); a.href = url; } catch (e) {}
 }
 async function applyStrategyBulk() {
     if (!supabaseClient || !currentUser) return;
