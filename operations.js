@@ -28,26 +28,45 @@ async function isDuplicateOperation(operation) {
     } catch (err) { return false; }
 }
 
+function normalizeNumber(n) { if (typeof n !== 'string') return n; return parseFloat(n.replace('.', '').replace(',', '.')); }
+function toIsoUTC(s) { const d = new Date(s); return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds(), d.getMilliseconds())).toISOString(); }
+
 async function processCSV(csv) {
-    const lines = csv.split('\n');
+    const lines = csv.split(/\r?\n/);
     const headers = lines[0].split(';').map(function(h) { return h.trim(); });
-    let imported = 0; let duplicates = 0; let errors = 0;
+    let imported = 0; let errors = 0;
+    const batchSize = 500; let batch = [];
     document.getElementById('uploadMessage').innerHTML = '<div class="loading">⏳ Importando...</div>';
     for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
+        const raw = lines[i]; if (!raw || !raw.trim()) continue;
         try {
-            const values = lines[i].split(';').map(function(v) { return v.trim(); });
-            const operation = {}; for (let j = 0; j < headers.length; j++) { operation[headers[j]] = values[j]; }
-            const isDuplicate = await isDuplicateOperation(operation);
-            if (isDuplicate) { duplicates++; continue; }
-            const quantity = parseFloat(operation.Quantity.replace('.', '').replace(',', '.'));
-            const price = parseFloat(operation.Price.replace('.', '').replace(',', '.'));
-            const commission = parseFloat((operation.Commission || '0').replace('$', '').replace(',', '.'));
-            const result = await supabaseClient.from('operations').insert([{ user_id: currentUser.id, instrument: operation.Instrument, action: operation.Action, quantity: quantity, price: price, time: new Date(operation.Time).toISOString(), e_x: operation['E/X'], position: operation.Position, commission: commission, account: operation.Account }]);
-            if (result.error) { errors++; } else { imported++; }
+            const values = raw.split(';').map(function(v) { return v.trim(); });
+            const op = {}; for (let j = 0; j < headers.length; j++) { op[headers[j]] = values[j]; }
+            const row = {
+                user_id: currentUser.id,
+                instrument: op.Instrument,
+                action: op.Action,
+                quantity: normalizeNumber(op.Quantity),
+                price: normalizeNumber(op.Price),
+                time: toIsoUTC(op.Time),
+                e_x: op['E/X'],
+                position: op.Position,
+                commission: normalizeNumber((op.Commission || '0').replace('$','')),
+                account: op.Account
+            };
+            batch.push(row);
+            if (batch.length >= batchSize) {
+                const res = await supabaseClient.from('operations').upsert(batch, { onConflict: 'user_id,digest' });
+                if (res.error) { errors += batch.length; } else { imported += (res.data ? res.data.length : batch.length); }
+                batch = [];
+            }
         } catch (err) { errors++; }
     }
-    document.getElementById('uploadMessage').innerHTML = '<div class="success">✅ ' + imported + ' importadas, ' + duplicates + ' duplicatas, ' + errors + ' erros</div>';
+    if (batch.length > 0) {
+        const res = await supabaseClient.from('operations').upsert(batch, { onConflict: 'user_id,digest' });
+        if (res.error) { errors += batch.length; } else { imported += (res.data ? res.data.length : batch.length); }
+    }
+    document.getElementById('uploadMessage').innerHTML = '<div class="success">✅ ' + imported + ' processadas, ' + errors + ' erros</div>';
     try { await consolidateTradesForUser(); } catch (e) {}
     await loadDataFromSupabase();
 }
