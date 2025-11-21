@@ -42,6 +42,10 @@
             <button class="btn btn-primary" onclick="handleCreateStrategy()">Criar Estratégia</button>
             <div id="strategyMessage" style="margin-top:8px;"></div>
         </div>
+
+        <h2 style="margin: 20px 0 10px 0;">Estratégias Criadas</h2>
+        <div id="strategiesGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 15px;">
+        </div>
     </div>
     <script src="globals.js"></script>
     <script src="supabase-init.js"></script>
