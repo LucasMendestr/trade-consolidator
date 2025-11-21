@@ -160,14 +160,18 @@ async function dedupAndInsertBatch(batch) {
         const sourceIds = [];
         for (let i = 0; i < batch.length; i++) { const sid = batch[i].source_id || ''; if (sid) sourceIds.push(sid); }
         if (sourceIds.length > 0) {
-            const sel = await supabaseClient
-                .from('operations')
-                .select('source_id')
-                .eq('user_id', currentUser.id)
-                .in('source_id', sourceIds);
-            const existing = sel.data || [];
             const existingSet = {};
-            for (let i = 0; i < existing.length; i++) { existingSet[existing[i].source_id] = true; }
+            const chunkSize = 100;
+            for (let start = 0; start < sourceIds.length; start += chunkSize) {
+                const chunk = sourceIds.slice(start, start + chunkSize);
+                const sel = await supabaseClient
+                    .from('operations')
+                    .select('source_id')
+                    .eq('user_id', currentUser.id)
+                    .in('source_id', chunk);
+                const existing = sel.data || [];
+                for (let i = 0; i < existing.length; i++) { existingSet[existing[i].source_id] = true; }
+            }
             const keysInBatch = {};
             const toInsert = [];
             let duplicates = 0;
@@ -182,7 +186,7 @@ async function dedupAndInsertBatch(batch) {
             if (toInsert.length === 0) { return { inserted: 0, duplicates: duplicates, errors: 0, errorDetails: [] }; }
             const res = await supabaseClient
                 .from('operations')
-                .upsert(toInsert, { onConflict: 'user_id,source_id' })
+                .upsert(toInsert, { onConflict: 'user_id,source_id', ignoreDuplicates: true })
                 .select('id');
             if (res.error) { return { inserted: 0, duplicates: duplicates, errors: toInsert.length, errorDetails: [{ line: null, type: 'insert', message: res.error.message }] }; }
             return { inserted: res.data ? res.data.length : toInsert.length, duplicates: duplicates, errors: 0, errorDetails: [] };
