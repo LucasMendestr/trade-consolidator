@@ -387,6 +387,30 @@ async function consolidateTradesForUserBatch() {
             linkLogs.push({ type: 'update_by_range', tradeId: u.tradeId, instrument: cand.instrument, account: cand.account, start: cand.start_time, end: cand.end_time, affected: res3 && res3.data ? res3.data.length : 0, error: res3 && res3.error ? res3.error.message : null });
             if (res3 && !res3.error) { const n3 = (res3.data ? res3.data.length : 0); opsUpdatedTotal += n3; opsUpdatedByRange += n3; }
         }
+        if (updatedCount === 0) {
+            for (let k = 0; k < (cand.opIds || []).length; k++) {
+                const singleId = cand.opIds[k];
+                const r1 = await supabaseClient
+                    .from('operations')
+                    .update({ trade_id: u.tradeId, trade_seq: u.tradeSeq })
+                    .eq('user_id', currentUser.id)
+                    .eq('id', singleId)
+                    .select('id');
+                linkLogs.push({ type: 'update_single_id', tradeId: u.tradeId, id: singleId, affected: r1 && r1.data ? r1.data.length : 0, error: r1 && r1.error ? r1.error.message : null });
+                if (r1 && !r1.error && r1.data && r1.data.length > 0) { updatedCount += 1; opsUpdatedTotal += 1; opsUpdatedByIds += 1; continue; }
+                const singleSrc = (cand.opSourceIds || [])[k];
+                if (singleSrc) {
+                    const r2 = await supabaseClient
+                        .from('operations')
+                        .update({ trade_id: u.tradeId, trade_seq: u.tradeSeq })
+                        .eq('user_id', currentUser.id)
+                        .eq('source_id', singleSrc)
+                        .select('id');
+                    linkLogs.push({ type: 'update_single_source', tradeId: u.tradeId, source_id: singleSrc, affected: r2 && r2.data ? r2.data.length : 0, error: r2 && r2.error ? r2.error.message : null });
+                    if (r2 && !r2.error && r2.data && r2.data.length > 0) { updatedCount += 1; opsUpdatedTotal += 1; opsUpdatedBySource += 1; }
+                }
+            }
+        }
     }
     const insertedCount = Object.keys(tradeIdByKey).length;
     let linkedOps = 0; for (let i = 0; i < updates.length; i++) { linkedOps += (updates[i].opIds || []).length; }
