@@ -11,11 +11,11 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root { --bg:#0f172a; --text:#e5e7eb; --card-bg:#111827; --header-bg:#111827; --surface:#1f2937; --accent:#22d3ee; --positive:#10b981; --negative:#ef4444; --grid:#334155; }
         body { font-family: Arial, sans-serif; background: var(--bg); color: var(--text); }
-        .app-container { background: var(--card-bg); padding: 30px; max-width: 1400px; margin: 20px auto; border-radius: 8px; }
+        .app-container { background: var(--card-bg); padding: 30px; max-width: 1200px; margin: 20px auto; border-radius: 8px; }
         .app-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ddd; padding-bottom: 20px; margin-bottom: 20px; }
         .btn { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.3s; }
         .btn-secondary { background: var(--surface); }
-        nav a { margin-right: 12px; color: var(--primary); text-decoration: none; font-weight: bold; }
+        nav a { margin-right: 12px; color: var(--text); text-decoration: none; font-weight: bold; }
         nav a:hover { text-decoration: underline; }
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 20px 0; }
         .stat-card { background: linear-gradient(135deg, rgba(34,211,238,0.2) 0%, rgba(16,185,129,0.2) 100%); border: 1px solid var(--grid); color: var(--text); padding: 20px; border-radius: 8px; text-align: center; }
@@ -34,7 +34,6 @@
             <a href="trades.html">Trades</a>
             <a href="upload.html">Upload</a>
             <a href="strategies.html">Estratégias</a>
-            <a href="settings.html">Configurações</a>
         </nav>
         <div class="filter-section">
             <label>🏦 Filtrar por Conta:</label>
