@@ -29,7 +29,23 @@ async function isDuplicateOperation(operation) {
 }
 
 function normalizeNumber(n) { if (typeof n !== 'string') return n; return parseFloat(n.replace('.', '').replace(',', '.')); }
-function toIsoUTC(s) { const d = new Date(s); return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds(), d.getMilliseconds())).toISOString(); }
+function toIsoUTC(s) {
+    if (!s) return null;
+    const dIso = new Date(s);
+    if (!isNaN(dIso.getTime())) { return dIso.toISOString(); }
+    const m = String(s).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    if (m) {
+        const day = parseInt(m[1], 10);
+        const mon = parseInt(m[2], 10) - 1;
+        const yr = parseInt(m[3], 10);
+        const hr = parseInt(m[4], 10);
+        const min = parseInt(m[5], 10);
+        const sec = m[6] != null ? parseInt(m[6], 10) : 0;
+        const d = new Date(yr, mon, day, hr, min, sec, 0);
+        if (!isNaN(d.getTime())) { return d.toISOString(); }
+    }
+    return null;
+}
 
 async function processCSV(csv) {
     const lines = csv.split(/\r?\n/);
@@ -47,8 +63,8 @@ async function processCSV(csv) {
             let missing = [];
             for (let r = 0; r < required.length; r++) { if (!op[required[r]] || String(op[required[r]]).trim() === '') missing.push(required[r]); }
             if (missing.length > 0) { tracker.validation++; tracker.details.push({ line: i, type: 'validation', message: 'Campos ausentes: ' + missing.join(','), raw: raw }); continue; }
-            const d = new Date(op.Time);
-            if (isNaN(d.getTime())) { tracker.time++; tracker.details.push({ line: i, type: 'time', message: 'Data/Hora inválida: ' + op.Time, raw: raw }); continue; }
+            const isoTime = toIsoUTC(op.Time);
+            if (!isoTime) { tracker.time++; tracker.details.push({ line: i, type: 'time', message: 'Data/Hora inválida: ' + op.Time, raw: raw }); continue; }
             const qty = normalizeNumber(op.Quantity);
             const prc = normalizeNumber(op.Price);
             let com = normalizeNumber((op.Commission || '0').replace('$',''));
@@ -61,7 +77,7 @@ async function processCSV(csv) {
                 action: op.Action,
                 quantity: qty,
                 price: prc,
-                time: toIsoUTC(op.Time),
+                time: isoTime,
                 e_x: op['E/X'],
                 position: op.Position,
                 commission: com,
