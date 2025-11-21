@@ -32,8 +32,6 @@ function normalizeNumber(n) { if (typeof n !== 'string') return n; return parseF
 function toIsoUTC(s) {
     if (!s) return null;
     const raw = String(s).trim();
-    const direct = new Date(raw);
-    if (!isNaN(direct.getTime())) { return direct.toISOString(); }
     let m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.(\d{1,3}))?$/);
     if (m) {
         const d = new Date(parseInt(m[3],10), parseInt(m[2],10)-1, parseInt(m[1],10), parseInt(m[4],10), parseInt(m[5],10), m[6]?parseInt(m[6],10):0, m[7]?parseInt(m[7],10):0);
@@ -55,6 +53,10 @@ function toIsoUTC(s) {
     if (m) {
         const d = new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10), parseInt(m[4],10), parseInt(m[5],10), m[6]?parseInt(m[6],10):0, 0);
         if (!isNaN(d.getTime())) return d.toISOString();
+    }
+    if (/^\d{4}-\d{2}-\d{2}T/.test(raw) || /Z$/.test(raw)) {
+        const direct = new Date(raw);
+        if (!isNaN(direct.getTime())) return direct.toISOString();
     }
     return null;
 }

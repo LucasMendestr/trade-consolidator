@@ -211,8 +211,6 @@ async function consolidateTradesForUserBatch() {
     function parseTimeToMillis(s) {
         if (!s) return NaN;
         const raw = String(s).trim();
-        const d = new Date(raw);
-        if (!isNaN(d.getTime())) return d.getTime();
         let m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.(\d{1,3}))?$/);
         if (m) { const dt = new Date(parseInt(m[3],10), parseInt(m[2],10)-1, parseInt(m[1],10), parseInt(m[4],10), parseInt(m[5],10), m[6]?parseInt(m[6],10):0, m[7]?parseInt(m[7],10):0); if (!isNaN(dt.getTime())) return dt.getTime(); }
         m = raw.match(/^(\d{1,2})-(\d{1,2})-(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.(\d{1,3}))?$/);
@@ -221,6 +219,8 @@ async function consolidateTradesForUserBatch() {
         if (m) { const dt = new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10), m[4]?parseInt(m[4],10):0, m[5]?parseInt(m[5],10):0, m[6]?parseInt(m[6],10):0, m[7]?parseInt(m[7],10):0); if (!isNaN(dt.getTime())) return dt.getTime(); }
         m = raw.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
         if (m) { const dt = new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10), parseInt(m[4],10), parseInt(m[5],10), m[6]?parseInt(m[6],10):0, 0); if (!isNaN(dt.getTime())) return dt.getTime(); }
+        const d = new Date(raw);
+        if (!isNaN(d.getTime())) return d.getTime();
         return NaN;
     }
     operations.sort(function(a,b){ const ta = parseTimeToMillis(a.time); const tb = parseTimeToMillis(b.time); if (isNaN(ta) && isNaN(tb)) return 0; if (isNaN(ta)) return -1; if (isNaN(tb)) return 1; return ta - tb; });
