@@ -14,8 +14,10 @@
         .btn { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.3s; }
         .btn-primary { background: var(--primary); color: white; }
         .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
-        .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; color: var(--text); }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid #334155; border-radius: 4px; background: var(--surface); color: var(--text); }
+        .form-group input::placeholder { color: #9ca3af; }
+        select { width: 280px; padding: 8px; border: 1px solid #334155; border-radius: 4px; font-size: 14px; background: var(--surface); color: var(--text); }
         nav a { margin-right: 12px; color: var(--text); text-decoration: none; font-weight: bold; }
         nav a:hover { text-decoration: underline; }
     </style>
