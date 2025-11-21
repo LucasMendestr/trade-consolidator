@@ -18,13 +18,16 @@
         table td { padding: 15px; border-bottom: 1px solid #ddd; }
         table tbody tr:hover { background: var(--surface); cursor: pointer; }
         select { width: 280px; padding: 8px; border: 1px solid #334155; border-radius: 4px; font-size: 14px; background: var(--surface); color: var(--text); }
+        .scroll-top { overflow-x: auto; background: var(--card-bg); border-bottom: 1px solid #334155; padding-bottom: 6px; }
+        .scroll-bottom { overflow-x: auto; }
     </style>
 </head>
 <body>
     <div class="app-container">
-        <div class="app-header">
+        <div class="app-header" style="align-items: center; gap: 12px;">
             <h1>📋 Trades</h1>
             <div></div>
+            <button class="btn btn-danger" onclick="deleteAllTransactions()" style="margin-left:auto;">🗑️ Excluir Tudo</button>
         </div>
         <nav>
             <a href="dashboard.html">Dashboard</a>
@@ -38,7 +41,8 @@
                 <option value="">Todas as contas</option>
             </select>
         </div>
-        <div style="overflow-x: auto;">
+        <div id="tableScrollTop" class="scroll-top"><div id="tableScrollTopInner"></div></div>
+        <div id="tableScrollBottom" class="scroll-bottom">
             <table id="tradesTable">
                 <thead>
                     <tr>

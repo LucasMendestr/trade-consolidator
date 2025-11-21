@@ -31,6 +31,19 @@ function updateTradesTable() {
     }
     if (tableHtml === '') { tradesBody.innerHTML = '<tr><td colspan="10" class="loading">Nenhum trade</td></tr>'; }
     else { tradesBody.innerHTML = tableHtml; }
+
+    const top = document.getElementById('tableScrollTop');
+    const topInner = document.getElementById('tableScrollTopInner');
+    const bottom = document.getElementById('tableScrollBottom');
+    if (top && topInner && bottom) {
+        topInner.style.width = bottom.scrollWidth + 'px';
+        const syncTop = function() { bottom.scrollLeft = top.scrollLeft; };
+        const syncBottom = function() { top.scrollLeft = bottom.scrollLeft; };
+        top.removeEventListener('scroll', syncTop);
+        bottom.removeEventListener('scroll', syncBottom);
+        top.addEventListener('scroll', syncTop);
+        bottom.addEventListener('scroll', syncBottom);
+    }
 }
 
 function showTradeDetails(idx) {
