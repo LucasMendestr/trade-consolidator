@@ -35,9 +35,11 @@ function updateDashboard() {
 
 function renderCharts() {
     const cs = getComputedStyle(document.body);
-    const purple = cs.getPropertyValue('--accent-purple').trim() || '#7c3aed';
-    const lime = cs.getPropertyValue('--accent-lime').trim() || '#84cc16';
-    const primary = cs.getPropertyValue('--primary').trim() || '#0ea5e9';
+    const accent = cs.getPropertyValue('--accent').trim() || '#22d3ee';
+    const positive = cs.getPropertyValue('--positive').trim() || '#10b981';
+    const negative = cs.getPropertyValue('--negative').trim() || '#ef4444';
+    const gridColor = cs.getPropertyValue('--grid').trim() || '#334155';
+    const textColor = cs.getPropertyValue('--text').trim() || '#e5e7eb';
     const elDailyCum = document.getElementById('chartDailyCumulative');
     const elDailyBar = document.getElementById('chartDailyBar');
     const elInst = document.getElementById('chartPnlInstrument');
@@ -49,19 +51,19 @@ function renderCharts() {
     const dates = Object.keys(dailyMap).sort(); const dailyVals = dates.map(function(k) { return dailyMap[k]; });
     const cumulative = []; let run = 0; for (let i = 0; i < dailyVals.length; i++) { run += dailyVals[i]; cumulative.push(run); }
     if (charts.dailyCumulative) charts.dailyCumulative.destroy();
-    charts.dailyCumulative = new Chart(elDailyCum.getContext('2d'), { type: 'line', data: { labels: dates, datasets: [{ label: 'PnL Diário Acumulado', data: cumulative, borderColor: purple, backgroundColor: 'rgba(124,77,255,0.2)', tension: 0.25 }] }, options: { plugins: { legend: { display: false } } } });
+    charts.dailyCumulative = new Chart(elDailyCum.getContext('2d'), { type: 'line', data: { labels: dates, datasets: [{ label: 'PnL Diário Acumulado', data: cumulative, borderColor: accent, backgroundColor: 'rgba(34,211,238,0.15)', tension: 0.25 }] }, options: { plugins: { legend: { display: false } }, scales: { x: { grid: { color: gridColor }, ticks: { color: textColor } }, y: { grid: { color: gridColor }, ticks: { color: textColor } } } } });
     if (charts.dailyBar) charts.dailyBar.destroy();
-    charts.dailyBar = new Chart(elDailyBar.getContext('2d'), { type: 'bar', data: { labels: dates, datasets: [{ label: 'PnL Diário', data: dailyVals, backgroundColor: dailyVals.map(function(v){ return v >= 0 ? lime : '#f43f5e'; }) }] }, options: { plugins: { legend: { display: false } } } });
+    charts.dailyBar = new Chart(elDailyBar.getContext('2d'), { type: 'bar', data: { labels: dates, datasets: [{ label: 'PnL Diário', data: dailyVals, backgroundColor: dailyVals.map(function(v){ return v >= 0 ? positive : negative; }) }] }, options: { plugins: { legend: { display: false } }, scales: { x: { grid: { color: gridColor }, ticks: { color: textColor } }, y: { grid: { color: gridColor }, ticks: { color: textColor } } } } });
     const instMap = {}; for (let i = 0; i < closed.length; i++) { const ins = closed[i].instrument; const pnl = parseFloat(closed[i].pnlDollars || 0); instMap[ins] = (instMap[ins] || 0) + pnl; }
     const insts = Object.keys(instMap); const instVals = insts.map(function(k) { return instMap[k]; });
     if (charts.pnlInstrument) charts.pnlInstrument.destroy();
-    charts.pnlInstrument = new Chart(elInst.getContext('2d'), { type: 'bar', data: { labels: insts, datasets: [{ label: 'PnL por Instrumento', data: instVals, backgroundColor: purple }] }, options: { plugins: { legend: { display: false } } } });
+    charts.pnlInstrument = new Chart(elInst.getContext('2d'), { type: 'bar', data: { labels: insts, datasets: [{ label: 'PnL por Instrumento', data: instVals, backgroundColor: accent }] }, options: { plugins: { legend: { display: false } }, scales: { x: { grid: { color: gridColor }, ticks: { color: textColor } }, y: { grid: { color: gridColor }, ticks: { color: textColor } } } } });
     let w = 0, l = 0; for (let i = 0; i < closed.length; i++) { const p = parseFloat(closed[i].pnlDollars || 0); if (p > 0) w++; else if (p < 0) l++; }
     if (charts.posNeg) charts.posNeg.destroy();
-    charts.posNeg = new Chart(elPosNeg.getContext('2d'), { type: 'pie', data: { labels: ['Positivos', 'Negativos'], datasets: [{ data: [w, l], backgroundColor: [lime, purple] }] } });
+    charts.posNeg = new Chart(elPosNeg.getContext('2d'), { type: 'pie', data: { labels: ['Positivos', 'Negativos'], datasets: [{ data: [w, l], backgroundColor: [positive, negative] }] } });
     const sorted = closed.slice().sort(function(a, b) { return new Date(a.endTime) - new Date(b.endTime); });
     const wrLabels = [], wrData = []; let cw = 0, cl = 0;
     for (let i = 0; i < sorted.length; i++) { const p = parseFloat(sorted[i].pnlDollars || 0); if (p > 0) cw++; else if (p < 0) cl++; const rate = (cw + cl) > 0 ? (cw / (cw + cl)) * 100 : 0; wrLabels.push(new Date(sorted[i].endTime).toLocaleDateString('pt-BR')); wrData.push(rate.toFixed(2)); }
     if (charts.winRate) charts.winRate.destroy();
-    charts.winRate = new Chart(elWinRate.getContext('2d'), { type: 'line', data: { labels: wrLabels, datasets: [{ label: 'Win Rate Acumulado (%)', data: wrData, borderColor: lime, backgroundColor: 'rgba(166,244,0,0.2)', tension: 0.25 }] }, options: { plugins: { legend: { display: false } } } });
+    charts.winRate = new Chart(elWinRate.getContext('2d'), { type: 'line', data: { labels: wrLabels, datasets: [{ label: 'Win Rate Acumulado (%)', data: wrData, borderColor: positive, backgroundColor: 'rgba(16,185,129,0.15)', tension: 0.25 }] }, options: { plugins: { legend: { display: false } }, scales: { x: { grid: { color: gridColor }, ticks: { color: textColor } }, y: { grid: { color: gridColor }, ticks: { color: textColor } } } } });
 }

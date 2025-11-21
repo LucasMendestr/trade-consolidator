@@ -75,9 +75,7 @@
         .loading { text-align: center; padding: 20px; color: #666; }
         h2 { margin: 20px 0 15px 0; font-size: 20px; color: #333; }
         h3 { margin: 15px 0 10px 0; font-size: 16px; color: #333; }
-        :root { --bg:#f5f7fa; --text:#0f172a; --card-bg:#ffffff; --header-bg:#ffffff; --surface:#eef2f7; --primary:#0ea5e9; --accent-purple:#7c3aed; --accent-lime:#84cc16; --positive:#16a34a; --negative:#ef4444; --warning:#f59e0b; }
-        .theme-light { --bg:#f5f7fa; --text:#0f172a; --card-bg:#ffffff; --header-bg:#ffffff; --surface:#eef2f7; --primary:#0ea5e9; --accent-purple:#7c3aed; --accent-lime:#84cc16; --positive:#16a34a; --negative:#ef4444; --warning:#f59e0b; }
-        .theme-dark  { --bg:#0b1020; --text:#e5e7eb; --card-bg:#10162b; --header-bg:#0f1426; --surface:#0f1426; --primary:#38bdf8; --accent-purple:#8b5cf6; --accent-lime:#a3e635; --positive:#22c55e; --negative:#f43f5e; --warning:#fbbf24; }
+        :root { --bg:#0f172a; --text:#e5e7eb; --card-bg:#111827; --header-bg:#111827; --surface:#1f2937; --primary:#22d3ee; --positive:#10b981; --negative:#ef4444; --warning:#f59e0b; }
         body { background: var(--bg); color: var(--text); }
         .app-container { background: var(--header-bg); }
         .filter-section, .upload-section { background: var(--card-bg); }
@@ -146,11 +144,7 @@
                 <h1>📊 Trade Consolidator Pro</h1>
                 <div class="user-section">
                     <p>Email: <strong id="userEmail"></strong></p>
-                    <div style="margin: 8px 0;">
-                        <label style="margin-right:8px;">Tema:</label>
-                        <label style="margin-right:10px;"><input type="radio" name="theme" value="light" onchange="setTheme('light')"> Claro</label>
-                        <label><input type="radio" name="theme" value="dark" onchange="setTheme('dark')"> Escuro</label>
-                    </div>
+                    <div style="margin: 8px 0;"></div>
                     <button class="btn btn-secondary" onclick="handleLogout()" style="width: 150px; margin-top: 10px;">Sair</button>
                 </div>
             </div>
