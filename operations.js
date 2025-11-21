@@ -36,37 +36,66 @@ async function processCSV(csv) {
     const headers = lines[0].split(';').map(function(h) { return h.trim(); });
     let imported = 0; let errors = 0; let duplicates = 0;
     const batchSize = 500; let batch = [];
+    const tracker = { parse: 0, validation: 0, normalize: 0, time: 0, insert: 0, other: 0, details: [] };
     document.getElementById('uploadMessage').innerHTML = '<div class="loading">⏳ Importando...</div>';
     for (let i = 1; i < lines.length; i++) {
         const raw = lines[i]; if (!raw || !raw.trim()) continue;
         try {
             const values = raw.split(';').map(function(v) { return v.trim(); });
             const op = {}; for (let j = 0; j < headers.length; j++) { op[headers[j]] = values[j]; }
+            const required = ['Instrument','Action','Quantity','Price','Time','Account'];
+            let missing = [];
+            for (let r = 0; r < required.length; r++) { if (!op[required[r]] || String(op[required[r]]).trim() === '') missing.push(required[r]); }
+            if (missing.length > 0) { tracker.validation++; tracker.details.push({ line: i, type: 'validation', message: 'Campos ausentes: ' + missing.join(','), raw: raw }); continue; }
+            const d = new Date(op.Time);
+            if (isNaN(d.getTime())) { tracker.time++; tracker.details.push({ line: i, type: 'time', message: 'Data/Hora inválida: ' + op.Time, raw: raw }); continue; }
+            const qty = normalizeNumber(op.Quantity);
+            const prc = normalizeNumber(op.Price);
+            let com = normalizeNumber((op.Commission || '0').replace('$',''));
+            if (isNaN(qty)) { tracker.normalize++; tracker.details.push({ line: i, type: 'normalize', message: 'Quantidade inválida: ' + op.Quantity, raw: raw }); continue; }
+            if (isNaN(prc)) { tracker.normalize++; tracker.details.push({ line: i, type: 'normalize', message: 'Preço inválido: ' + op.Price, raw: raw }); continue; }
+            if (isNaN(com)) { tracker.normalize++; tracker.details.push({ line: i, type: 'normalize', message: 'Comissão inválida: ' + op.Commission, raw: raw }); continue; }
             const row = {
                 user_id: currentUser.id,
                 instrument: op.Instrument,
                 action: op.Action,
-                quantity: normalizeNumber(op.Quantity),
-                price: normalizeNumber(op.Price),
+                quantity: qty,
+                price: prc,
                 time: toIsoUTC(op.Time),
                 e_x: op['E/X'],
                 position: op.Position,
-                commission: normalizeNumber((op.Commission || '0').replace('$','')),
+                commission: com,
                 account: op.Account
             };
             batch.push(row);
             if (batch.length >= batchSize) {
                 const result = await dedupAndInsertBatch(batch);
                 imported += result.inserted; duplicates += result.duplicates; errors += result.errors;
+                if (result.errorDetails && result.errorDetails.length > 0) { for (let k = 0; k < result.errorDetails.length; k++) tracker.details.push(result.errorDetails[k]); tracker.insert += result.errors; }
                 batch = [];
             }
-        } catch (err) { errors++; }
+        } catch (err) { errors++; tracker.parse++; tracker.details.push({ line: i, type: 'parse', message: err && err.message ? err.message : 'Falha ao processar linha', raw: raw }); }
     }
     if (batch.length > 0) {
         const result = await dedupAndInsertBatch(batch);
         imported += result.inserted; duplicates += result.duplicates; errors += result.errors;
+        if (result.errorDetails && result.errorDetails.length > 0) { for (let k = 0; k < result.errorDetails.length; k++) tracker.details.push(result.errorDetails[k]); tracker.insert += result.errors; }
     }
-    document.getElementById('uploadMessage').innerHTML = '<div class="success">✅ ' + imported + ' processadas, ' + duplicates + ' duplicatas, ' + errors + ' erros</div>';
+    const summary = [];
+    if (tracker.validation) summary.push('Validação: ' + tracker.validation);
+    if (tracker.time) summary.push('Tempo: ' + tracker.time);
+    if (tracker.normalize) summary.push('Normalização: ' + tracker.normalize);
+    if (tracker.parse) summary.push('Parse: ' + tracker.parse);
+    if (tracker.insert) summary.push('Inserção: ' + tracker.insert);
+    window.lastUploadErrors = tracker;
+    const statusHtml = '<div class="success">✅ ' + imported + ' processadas, ' + duplicates + ' duplicatas, ' + errors + ' erros' + (summary.length ? ' (' + summary.join(' • ') + ')' : '') + '</div>' +
+        '<div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">' +
+        '<button class="btn btn-secondary" onclick="toggleUploadErrors()">Ver detalhes dos erros</button>' +
+        '<a id="downloadErrors" class="btn btn-secondary" href="#" download="upload-erros.json">Baixar log</a>' +
+        '</div>' +
+        '<div id="uploadErrorsPanel" style="display:none; margin-top:10px; background: #1f2937; color:#e5e7eb; padding:10px; border-radius:4px; max-height:280px; overflow:auto;"></div>';
+    document.getElementById('uploadMessage').innerHTML = statusHtml;
+    setUploadErrorsDownloadLink(tracker);
     try { await consolidateTradesForUser(); } catch (e) {}
     await loadDataFromSupabase();
 }
@@ -122,11 +151,43 @@ async function dedupAndInsertBatch(batch) {
             keysInBatch[key] = true;
             toInsert.push(batch[i]);
         }
-        if (toInsert.length === 0) { return { inserted: 0, duplicates: duplicates, errors: 0 }; }
+        if (toInsert.length === 0) { return { inserted: 0, duplicates: duplicates, errors: 0, errorDetails: [] }; }
         const res = await supabaseClient.from('operations').insert(toInsert).select('id');
-        if (res.error) { return { inserted: 0, duplicates: duplicates, errors: toInsert.length }; }
-        return { inserted: res.data ? res.data.length : toInsert.length, duplicates: duplicates, errors: 0 };
+        if (res.error) { return { inserted: 0, duplicates: duplicates, errors: toInsert.length, errorDetails: [{ line: null, type: 'insert', message: res.error.message }] }; }
+        return { inserted: res.data ? res.data.length : toInsert.length, duplicates: duplicates, errors: 0, errorDetails: [] };
     } catch (err) {
-        return { inserted: 0, duplicates: 0, errors: batch.length };
+        return { inserted: 0, duplicates: 0, errors: batch.length, errorDetails: [{ line: null, type: 'insert', message: err && err.message ? err.message : 'Falha ao inserir lote' }] };
     }
+}
+
+function toggleUploadErrors() {
+    const panel = document.getElementById('uploadErrorsPanel');
+    if (!panel) return;
+    const visible = panel.style.display !== 'none';
+    if (visible) { panel.style.display = 'none'; return; }
+    const data = window.lastUploadErrors && window.lastUploadErrors.details ? window.lastUploadErrors.details : [];
+    const max = 100;
+    let html = '';
+    if (data.length === 0) { html = '<div>Nenhum detalhe de erro</div>'; }
+    else {
+        for (let i = 0; i < Math.min(data.length, max); i++) {
+            const d = data[i];
+            const ln = d.line != null ? ('Linha ' + d.line + ' • ') : '';
+            html += '<div style="padding:6px; border-bottom:1px solid #334155;">' + ln + (d.type || '-') + ' • ' + (d.message || '-') + '</div>';
+        }
+        if (data.length > max) { html += '<div style="padding:6px; color:#9ca3af;">+' + (data.length - max) + ' itens adicionais</div>'; }
+    }
+    panel.innerHTML = html;
+    panel.style.display = 'block';
+}
+
+function setUploadErrorsDownloadLink(tracker) {
+    try {
+        const a = document.getElementById('downloadErrors');
+        if (!a) return;
+        const obj = { summary: { validation: tracker.validation, time: tracker.time, normalize: tracker.normalize, parse: tracker.parse, insert: tracker.insert }, details: tracker.details };
+        const blob = new Blob([JSON.stringify(obj)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        a.href = url;
+    } catch (e) {}
 }
