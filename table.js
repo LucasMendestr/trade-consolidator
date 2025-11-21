@@ -1,6 +1,10 @@
 function formatDate(dateString) { if (!dateString) return '-'; const date = new Date(dateString); return date.toLocaleString('pt-BR'); }
 
 function updateTradesTable() {
+    const tradesBody = document.getElementById('tradesBody');
+    if (!tradesBody) {
+        return;
+    }
     let tableHtml = '';
     for (let i = 0; i < filteredTrades.length; i++) {
         const t = filteredTrades[i];
@@ -25,7 +29,6 @@ function updateTradesTable() {
             '<td>' + (t.id ? selectHtml : '-') + '</td>' +
             '</tr>';
     }
-    const tradesBody = document.getElementById('tradesBody');
     if (tableHtml === '') { tradesBody.innerHTML = '<tr><td colspan="10" class="loading">Nenhum trade</td></tr>'; }
     else { tradesBody.innerHTML = tableHtml; }
 }
