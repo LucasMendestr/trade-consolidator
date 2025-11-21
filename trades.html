@@ -38,7 +38,47 @@
             <a href="upload.html">Upload</a>
             <a href="strategies.html">Estratégias</a>
         </nav>
-        <div class="filter-section" style="background: var(--card-bg); padding: 15px; border-radius: 8px; margin: 0 0 20px 0;">
+        <div id="tradeDetails" style="display:none; margin-top:20px; background: var(--card-bg); padding: 20px; border-radius: 8px; border-left: 5px solid var(--primary);">
+            <div class="detail-header" style="display:flex; justify-content: space-between; align-items:center; margin-bottom:20px;">
+                <h2>📊 Detalhes do Trade</h2>
+                <button class="close-btn" onclick="closeTradeDetails()">✕ Fechar</button>
+            </div>
+            <div class="detail-grid" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:15px; margin:20px 0;">
+                <div class="detail-item" style="background: var(--card-bg); padding:15px; border-radius:4px;">
+                    <strong>Instrumento</strong>
+                    <span id="detailInstrument">-</span>
+                </div>
+                <div class="detail-item" style="background: var(--card-bg); padding:15px; border-radius:4px;">
+                    <strong>Tipo</strong>
+                    <span id="detailType">-</span>
+                </div>
+                <div class="detail-item" style="background: var(--card-bg); padding:15px; border-radius:4px;">
+                    <strong>Status</strong>
+                    <span id="detailStatus">-</span>
+                </div>
+                <div class="detail-item" style="background: var(--card-bg); padding:15px; border-radius:4px;">
+                    <strong>Conta</strong>
+                    <span id="detailAccount">-</span>
+                </div>
+            </div>
+            <h3>📈 Operações do Trade</h3>
+            <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr>
+                            <th style="padding:10px; text-align:left; border-bottom:2px solid #ddd;">Hora</th>
+                            <th style="padding:10px; text-align:left; border-bottom:2px solid #ddd;">Ação</th>
+                            <th style="padding:10px; text-align:left; border-bottom:2px solid #ddd;">Quantidade</th>
+                            <th style="padding:10px; text-align:left; border-bottom:2px solid #ddd;">Preço</th>
+                            <th style="padding:10px; text-align:left; border-bottom:2px solid #ddd;">Comissão</th>
+                            <th style="padding:10px; text-align:left; border-bottom:2px solid #ddd;">Tipo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detailOperations"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="filter-section" style="background: var(--card-bg); padding: 15px; border-radius: 8px; margin: 15px 0 20px 0;">
             <label>🏦 Filtrar por Conta:</label>
             <select id="accountFilter" onchange="filterTrades()">
                 <option value="">Todas as contas</option>
@@ -109,46 +149,6 @@
                 <option value="">Selecione a estratégia</option>
             </select>
             <button class="btn" style="background:#22d3ee; color:#0b1020; margin-left:10px;" onclick="applyStrategyBulk()">Aplicar</button>
-        </div>
-        <div id="tradeDetails" style="display:none; margin-top:30px; background: var(--card-bg); padding: 20px; border-radius: 8px; border-left: 5px solid var(--primary);">
-            <div class="detail-header" style="display:flex; justify-content: space-between; align-items:center; margin-bottom:20px;">
-                <h2>📊 Detalhes do Trade</h2>
-                <button class="close-btn" onclick="closeTradeDetails()">✕ Fechar</button>
-            </div>
-            <div class="detail-grid" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:15px; margin:20px 0;">
-                <div class="detail-item" style="background: var(--card-bg); padding:15px; border-radius:4px;">
-                    <strong>Instrumento</strong>
-                    <span id="detailInstrument">-</span>
-                </div>
-                <div class="detail-item" style="background: var(--card-bg); padding:15px; border-radius:4px;">
-                    <strong>Tipo</strong>
-                    <span id="detailType">-</span>
-                </div>
-                <div class="detail-item" style="background: var(--card-bg); padding:15px; border-radius:4px;">
-                    <strong>Status</strong>
-                    <span id="detailStatus">-</span>
-                </div>
-                <div class="detail-item" style="background: var(--card-bg); padding:15px; border-radius:4px;">
-                    <strong>Conta</strong>
-                    <span id="detailAccount">-</span>
-                </div>
-            </div>
-            <h3>📈 Operações do Trade</h3>
-            <div style="overflow-x:auto;">
-                <table style="width:100%; border-collapse:collapse;">
-                    <thead>
-                        <tr>
-                            <th style="padding:10px; text-align:left; border-bottom:2px solid #ddd;">Hora</th>
-                            <th style="padding:10px; text-align:left; border-bottom:2px solid #ddd;">Ação</th>
-                            <th style="padding:10px; text-align:left; border-bottom:2px solid #ddd;">Quantidade</th>
-                            <th style="padding:10px; text-align:left; border-bottom:2px solid #ddd;">Preço</th>
-                            <th style="padding:10px; text-align:left; border-bottom:2px solid #ddd;">Comissão</th>
-                            <th style="padding:10px; text-align:left; border-bottom:2px solid #ddd;">Tipo</th>
-                        </tr>
-                    </thead>
-                    <tbody id="detailOperations"></tbody>
-                </table>
-            </div>
         </div>
     </div>
     <script src="globals.js"></script>

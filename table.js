@@ -60,18 +60,33 @@ function showTradeDetails(idx) {
     const pnlColor = pnlValue >= 0 ? '#4CAF50' : '#f44336';
     document.getElementById('detailPnL').innerHTML = '<span style="color: ' + pnlColor + ';">$' + selectedTrade.pnlDollars + '</span>';
     populateOperationsTable();
-    window.scrollTo(0, document.getElementById('tradeDetails').offsetTop - 100);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 async function populateOperationsTable() {
-    if (!selectedTrade || !selectedTrade.id) { document.getElementById('detailOperations').innerHTML = ''; return; }
-    const res = await supabaseClient.from('operations').select('*').eq('user_id', currentUser.id).eq('trade_id', selectedTrade.id).order('time');
-    selectedTradeOperations = res.data || [];
-    const allOps = selectedTradeOperations.slice().sort(function(a, b) { return new Date(a.time) - new Date(b.time); });
+    if (!selectedTrade) { document.getElementById('detailOperations').innerHTML = ''; return; }
+    let res = null;
+    if (selectedTrade.id) {
+        res = await supabaseClient.from('operations').select('*').eq('user_id', currentUser.id).eq('trade_id', selectedTrade.id).order('time');
+    } else {
+        res = await supabaseClient
+            .from('operations')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .eq('instrument', selectedTrade.instrument)
+            .eq('account', selectedTrade.account)
+            .gte('time', selectedTrade.startTime)
+            .lte('time', selectedTrade.endTime)
+            .order('time');
+    }
+    selectedTradeOperations = (res && res.data) ? res.data : [];
+    function parseMillis(s){ const d = new Date(s); const t = d.getTime(); return isNaN(t) ? 0 : t; }
+    const allOps = selectedTradeOperations.slice().sort(function(a, b) { return parseMillis(a.time) - parseMillis(b.time); });
     let html = '';
     for (let i = 0; i < allOps.length; i++) {
         const op = allOps[i];
-        const timeStr = new Date(op.time).toLocaleString('pt-BR');
+        const dt = new Date(op.time);
+        const timeStr = isNaN(dt.getTime()) ? String(op.time || '-') : dt.toLocaleString('pt-BR');
         html += '<tr>' +
             '<td style="padding: 10px;">' + timeStr + '</td>' +
             '<td style="padding: 10px;">' + op.action + '</td>' +
