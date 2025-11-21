@@ -263,7 +263,7 @@ async function consolidateTradesForUserBatch() {
                         const tsEnd = parseTimeToMillis(op.time);
                         const startIso = isNaN(tsStart) ? String(tradeOpen.startTime || '') : new Date(tsStart).toISOString();
                         const endIso = isNaN(tsEnd) ? String(op.time || '') : new Date(tsEnd).toISOString();
-                        candidates.push({ instrument: tradeOpen.instrument, account: tradeOpen.account, type: tradeOpen.type, start_time: startIso, end_time: endIso, status: 'Closed', avg_price_entry: avgEntry, avg_price_exit: avgExit, total_qty_entry: entryQty, total_qty_exit: exitQty, pnl_points: (pointsDiff * entryQty), pnl_dollars: pnlDollars, total_commissions: totalComm, opIds: tradeOpen.entries.concat(tradeOpen.exits).map(function(o){ return o.id; }) });
+                        candidates.push({ instrument: tradeOpen.instrument, account: tradeOpen.account, type: tradeOpen.type, start_time: startIso, end_time: endIso, status: 'Closed', avg_price_entry: avgEntry, avg_price_exit: avgExit, total_qty_entry: entryQty, total_qty_exit: exitQty, pnl_points: (pointsDiff * entryQty), pnl_dollars: pnlDollars, total_commissions: totalComm, opIds: tradeOpen.entries.concat(tradeOpen.exits).map(function(o){ return o.id; }), opSourceIds: tradeOpen.entries.concat(tradeOpen.exits).map(function(o){ return o.source_id || null; }).filter(function(v){ return v; }) });
                         tradeOpen = null;
                     }
                 }
@@ -328,8 +328,10 @@ async function consolidateTradesForUserBatch() {
         if (ids.length === 0) continue;
         updates.push({ tradeId: tId, opIds: ids });
     }
+    const linkLogs = [];
     for (let i = 0; i < updates.length; i++) {
         const u = updates[i];
+        const cand = candidates[i] || {};
         const chunkSize = 100;
         let updatedCount = 0;
         for (let start = 0; start < u.opIds.length; start += chunkSize) {
@@ -340,18 +342,33 @@ async function consolidateTradesForUserBatch() {
                 .in('id', chunk)
                 .eq('user_id', currentUser.id)
                 .select('id');
+            linkLogs.push({ type: 'update_by_ids', tradeId: u.tradeId, chunkCount: chunk.length, affected: res && res.data ? res.data.length : 0, error: res && res.error ? res.error.message : null });
             if (res && !res.error) { updatedCount += (res.data ? res.data.length : 0); }
         }
+        if (updatedCount === 0 && (cand.opSourceIds || []).length > 0) {
+            for (let start = 0; start < cand.opSourceIds.length; start += chunkSize) {
+                const sChunk = cand.opSourceIds.slice(start, start + chunkSize);
+                const res2 = await supabaseClient
+                    .from('operations')
+                    .update({ trade_id: u.tradeId })
+                    .in('source_id', sChunk)
+                    .eq('user_id', currentUser.id)
+                    .select('id');
+                linkLogs.push({ type: 'update_by_source_id', tradeId: u.tradeId, chunkCount: sChunk.length, affected: res2 && res2.data ? res2.data.length : 0, error: res2 && res2.error ? res2.error.message : null });
+                if (res2 && !res2.error) { updatedCount += (res2.data ? res2.data.length : 0); }
+            }
+        }
         if (updatedCount === 0) {
-            await supabaseClient
+            const res3 = await supabaseClient
                 .from('operations')
                 .update({ trade_id: u.tradeId })
                 .eq('user_id', currentUser.id)
-                .eq('instrument', (candidates[i] || {}).instrument)
-                .eq('account', (candidates[i] || {}).account)
-                .gte('time', (candidates[i] || {}).start_time)
-                .lte('time', (candidates[i] || {}).end_time)
+                .eq('instrument', cand.instrument)
+                .eq('account', cand.account)
+                .gte('time', cand.start_time)
+                .lte('time', cand.end_time)
                 .select('id');
+            linkLogs.push({ type: 'update_by_range', tradeId: u.tradeId, instrument: cand.instrument, account: cand.account, start: cand.start_time, end: cand.end_time, affected: res3 && res3.data ? res3.data.length : 0, error: res3 && res3.error ? res3.error.message : null });
         }
     }
     const insertedCount = Object.keys(tradeIdByKey).length;
@@ -364,6 +381,8 @@ async function consolidateTradesForUserBatch() {
         '<div id="tradeErrorsPanel" style="display:none; margin-top:10px; background: #1f2937; color:#e5e7eb; padding:10px; border-radius:4px; max-height:280px; overflow:auto;"></div>';
     const msgEl = document.getElementById('uploadMessage');
     if (msgEl) { const prev = msgEl.innerHTML; msgEl.innerHTML = prev + summaryHtml; }
+    window.lastTradeErrors = { summary: { inserted: insertedCount, duplicates: (candidates.length - insertedCount), updates: linkedOps }, details: linkLogs };
+    setTradeErrorsDownloadLink(window.lastTradeErrors);
 }
 
 function toggleTradeErrors() {
