@@ -39,7 +39,7 @@ function renderStrategiesGrid() {
     let html = '';
     for (let i = 0; i < allStrategies.length; i++) {
         const s = allStrategies[i];
-        html += '<div style="background: var(--surface); border: 1px solid #334155; border-radius: 8px; padding: 14px; display:flex; flex-direction:column; gap:8px;">' +
+        html += '<div style="background: var(--surface); border: 1px solid #334155; border-radius: 8px; padding: 14px; display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">' +
             '<div style="font-size:18px; font-weight:bold; color: var(--text);">' + (s.name || '-') + '</div>' +
             '<div style="font-size:13px; color: #9ca3af;">Timeframe: ' + (s.timeframe || '-') + '</div>' +
             '<div style="font-size:13px; color: #9ca3af;">RR esperado: ' + (s.risk_reward_expected != null ? s.risk_reward_expected : '-') + '</div>' +
