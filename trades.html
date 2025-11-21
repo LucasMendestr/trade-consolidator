@@ -76,6 +76,10 @@
                 </div>
             </div>
             <h3>📈 Operações do Trade</h3>
+            <div style="display:flex; gap:12px; align-items:center; margin:8px 0 6px 0;">
+                <div id="detailOpsSummary" style="font-size:12px; color:#9ca3af;">-</div>
+                <a id="downloadOpsCSV" class="btn btn-secondary" href="#" download="trade-operations.csv">Baixar operações (CSV)</a>
+            </div>
             <div style="overflow-x:auto;">
                 <table style="width:100%; border-collapse:collapse;">
                     <thead>
@@ -86,6 +90,7 @@
                             <th style="padding:10px; text-align:left; border-bottom:2px solid #ddd;">Preço</th>
                             <th style="padding:10px; text-align:left; border-bottom:2px solid #ddd;">Comissão</th>
                             <th style="padding:10px; text-align:left; border-bottom:2px solid #ddd;">Tipo</th>
+                            <th style="padding:10px; text-align:left; border-bottom:2px solid #ddd;">ID</th>
                         </tr>
                     </thead>
                     <tbody id="detailOperations"></tbody>

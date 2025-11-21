@@ -82,6 +82,14 @@ async function populateOperationsTable() {
     selectedTradeOperations = (res && res.data) ? res.data : [];
     function parseMillis(s){ const d = new Date(s); const t = d.getTime(); return isNaN(t) ? 0 : t; }
     const allOps = selectedTradeOperations.slice().sort(function(a, b) { return parseMillis(a.time) - parseMillis(b.time); });
+    let entries = 0; let exits = 0;
+    for (let i = 0; i < allOps.length; i++) { if (allOps[i].e_x === 'Entry') entries++; else if (allOps[i].e_x === 'Exit') exits++; }
+    const sumEl = document.getElementById('detailOpsSummary');
+    if (sumEl) {
+        const startStr = selectedTrade.startTime ? new Date(selectedTrade.startTime).toLocaleString('pt-BR') : '-';
+        const endStr = selectedTrade.endTime ? new Date(selectedTrade.endTime).toLocaleString('pt-BR') : '-';
+        sumEl.textContent = entries + ' entradas • ' + exits + ' saídas • Filtro: ' + (selectedTrade.instrument || '-') + ' | ' + (selectedTrade.account || '-') + ' • ' + startStr + ' → ' + endStr;
+    }
     let html = '';
     for (let i = 0; i < allOps.length; i++) {
         const op = allOps[i];
@@ -94,9 +102,23 @@ async function populateOperationsTable() {
             '<td style="padding: 10px;">$' + parseFloat(op.price).toFixed(2) + '</td>' +
             '<td style="padding: 10px;">$' + parseFloat(op.commission || 0).toFixed(2) + '</td>' +
             '<td style="padding: 10px;">' + op.e_x + '</td>' +
+            '<td style="padding: 10px;">' + (op.source_id || '-') + '</td>' +
             '</tr>';
     }
     document.getElementById('detailOperations').innerHTML = html;
+    try {
+        const a = document.getElementById('downloadOpsCSV');
+        if (a) {
+            const rows = [['Hora','Ação','Quantidade','Preço','Comissão','Tipo','ID']].concat(allOps.map(function(op){
+                const dt = new Date(op.time); const timeStr = isNaN(dt.getTime()) ? String(op.time || '-') : dt.toISOString();
+                return [timeStr, op.action, op.quantity, op.price, op.commission || 0, op.e_x, op.source_id || ''];
+            }));
+            const csv = rows.map(function(r){ return r.join(','); }).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            a.href = url;
+        }
+    } catch (e) {}
 }
 
 function closeTradeDetails() { document.getElementById('tradeDetails').style.display = 'none'; selectedTrade = null; selectedTradeOperations = []; }
