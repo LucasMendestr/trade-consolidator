@@ -289,44 +289,59 @@ async function consolidateTradesForUserBatch() {
     if (instruments.length > 0) {
         const sel = await supabaseClient
             .from('trades')
-            .select('id,instrument,account,type,start_time,end_time')
+            .select('id,instrument,account,type,start_time,end_time,trades_seq')
             .eq('user_id', currentUser.id)
             .in('instrument', instruments)
             .in('account', accounts)
             .gte('start_time', minIso)
             .lte('end_time', maxIso);
         const existing = sel.data || [];
-        for (let i = 0; i < existing.length; i++) { const x = existing[i]; existingMap[(x.instrument || '') + '|' + (x.account || '') + '|' + (x.type || '') + '|' + (x.start_time || '') + '|' + (x.end_time || '')] = x.id; }
+        for (let i = 0; i < existing.length; i++) { const x = existing[i]; const k = (x.instrument || '') + '|' + (x.account || '') + '|' + (x.type || '') + '|' + (x.start_time || '') + '|' + (x.end_time || ''); existingMap[k] = x.id; existingMap[k + '|seq'] = x.trades_seq; }
     }
+    let nextSeq = 1;
+    try {
+        const seqRes = await supabaseClient
+            .from('trades')
+            .select('trades_seq')
+            .eq('user_id', currentUser.id)
+            .order('trades_seq', { ascending: false })
+            .limit(1);
+        if (seqRes && seqRes.data && seqRes.data.length > 0 && seqRes.data[0].trades_seq != null) { nextSeq = parseInt(seqRes.data[0].trades_seq, 10) + 1; }
+    } catch (e) {}
     const toInsert = []; const keysForInsert = []; const tradeIdByKey = {};
     for (let i = 0; i < candidates.length; i++) {
         const key = kTrade(candidates[i]);
         const exId = existingMap[key];
         if (exId) { tradeIdByKey[key] = exId; }
         else {
-            toInsert.push({ user_id: currentUser.id, instrument: candidates[i].instrument, account: candidates[i].account, type: candidates[i].type, start_time: candidates[i].start_time, end_time: candidates[i].end_time, status: candidates[i].status, avg_price_entry: candidates[i].avg_price_entry, avg_price_exit: candidates[i].avg_price_exit, total_qty_entry: candidates[i].total_qty_entry, total_qty_exit: candidates[i].total_qty_exit, pnl_points: candidates[i].pnl_points, pnl_dollars: candidates[i].pnl_dollars, total_commissions: candidates[i].total_commissions });
+            const seq = nextSeq++;
+            toInsert.push({ user_id: currentUser.id, instrument: candidates[i].instrument, account: candidates[i].account, type: candidates[i].type, start_time: candidates[i].start_time, end_time: candidates[i].end_time, status: candidates[i].status, avg_price_entry: candidates[i].avg_price_entry, avg_price_exit: candidates[i].avg_price_exit, total_qty_entry: candidates[i].total_qty_entry, total_qty_exit: candidates[i].total_qty_exit, pnl_points: candidates[i].pnl_points, pnl_dollars: candidates[i].pnl_dollars, total_commissions: candidates[i].total_commissions, trades_seq: seq });
             keysForInsert.push(key);
+            existingMap[key + '|seq'] = seq;
         }
     }
     if (toInsert.length > 0) {
         const ins = await supabaseClient
             .from('trades')
             .insert(toInsert)
-            .select('id,instrument,account,type,start_time,end_time');
+            .select('id,instrument,account,type,start_time,end_time,trades_seq');
         const rows = ins.data || [];
         for (let i = 0; i < rows.length; i++) {
             const r = rows[i];
-            tradeIdByKey[(r.instrument || '') + '|' + (r.account || '') + '|' + (r.type || '') + '|' + (r.start_time || '') + '|' + (r.end_time || '')] = r.id;
+            const k = (r.instrument || '') + '|' + (r.account || '') + '|' + (r.type || '') + '|' + (r.start_time || '') + '|' + (r.end_time || '');
+            tradeIdByKey[k] = r.id;
+            existingMap[k + '|seq'] = r.trades_seq;
         }
     }
     const updates = [];
     for (let i = 0; i < candidates.length; i++) {
         const key = kTrade(candidates[i]);
         const tId = tradeIdByKey[key];
+        const tSeq = existingMap[key + '|seq'];
         if (!tId) continue;
         const ids = candidates[i].opIds || [];
         if (ids.length === 0) continue;
-        updates.push({ tradeId: tId, opIds: ids });
+        updates.push({ tradeId: tId, tradeSeq: tSeq, opIds: ids });
     }
     const linkLogs = [];
     for (let i = 0; i < updates.length; i++) {
@@ -338,7 +353,7 @@ async function consolidateTradesForUserBatch() {
             const chunk = u.opIds.slice(start, start + chunkSize);
             const res = await supabaseClient
                 .from('operations')
-                .update({ trade_id: u.tradeId })
+                .update({ trade_id: u.tradeId, trade_seq: u.tradeSeq })
                 .in('id', chunk)
                 .eq('user_id', currentUser.id)
                 .select('id');
@@ -350,7 +365,7 @@ async function consolidateTradesForUserBatch() {
                 const sChunk = cand.opSourceIds.slice(start, start + chunkSize);
                 const res2 = await supabaseClient
                     .from('operations')
-                    .update({ trade_id: u.tradeId })
+                    .update({ trade_id: u.tradeId, trade_seq: u.tradeSeq })
                     .in('source_id', sChunk)
                     .eq('user_id', currentUser.id)
                     .select('id');
@@ -361,7 +376,7 @@ async function consolidateTradesForUserBatch() {
         if (updatedCount === 0) {
             const res3 = await supabaseClient
                 .from('operations')
-                .update({ trade_id: u.tradeId })
+                .update({ trade_id: u.tradeId, trade_seq: u.tradeSeq })
                 .eq('user_id', currentUser.id)
                 .eq('instrument', cand.instrument)
                 .eq('account', cand.account)
