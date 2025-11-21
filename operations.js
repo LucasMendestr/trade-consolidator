@@ -54,20 +54,79 @@ async function processCSV(csv) {
                 commission: normalizeNumber((op.Commission || '0').replace('$','')),
                 account: op.Account
             };
-            const isDup = await isDuplicateOperation(op);
-            if (isDup) { duplicates++; } else { batch.push(row); }
+            batch.push(row);
             if (batch.length >= batchSize) {
-                const res = await supabaseClient.from('operations').insert(batch).select('id');
-                if (res.error) { errors += batch.length; } else { imported += (res.data ? res.data.length : batch.length); }
+                const result = await dedupAndInsertBatch(batch);
+                imported += result.inserted; duplicates += result.duplicates; errors += result.errors;
                 batch = [];
             }
         } catch (err) { errors++; }
     }
     if (batch.length > 0) {
-        const res = await supabaseClient.from('operations').insert(batch).select('id');
-        if (res.error) { errors += batch.length; } else { imported += (res.data ? res.data.length : batch.length); }
+        const result = await dedupAndInsertBatch(batch);
+        imported += result.inserted; duplicates += result.duplicates; errors += result.errors;
     }
     document.getElementById('uploadMessage').innerHTML = '<div class="success">✅ ' + imported + ' processadas, ' + duplicates + ' duplicatas, ' + errors + ' erros</div>';
     try { await consolidateTradesForUser(); } catch (e) {}
     await loadDataFromSupabase();
+}
+
+function makeOpKeyFromRow(row) {
+    const q = parseFloat(row.quantity || 0).toFixed(6);
+    const p = parseFloat(row.price || 0).toFixed(6);
+    const c = parseFloat(row.commission || 0).toFixed(6);
+    return (row.instrument || '') + '|' + (row.action || '') + '|' + (row.account || '') + '|' + (row.e_x || '') + '|' + (row.position || '') + '|' + q + '|' + p + '|' + c + '|' + (row.time || '');
+}
+
+function makeOpKeyFromDb(op) {
+    const q = parseFloat(op.quantity || 0).toFixed(6);
+    const p = parseFloat(op.price || 0).toFixed(6);
+    const c = parseFloat(op.commission || 0).toFixed(6);
+    const t = new Date(op.time).toISOString();
+    return (op.instrument || '') + '|' + (op.action || '') + '|' + (op.account || '') + '|' + (op.e_x || '') + '|' + (op.position || '') + '|' + q + '|' + p + '|' + c + '|' + t;
+}
+
+async function dedupAndInsertBatch(batch) {
+    try {
+        const instrumentsSet = {};
+        let minTime = null; let maxTime = null;
+        for (let i = 0; i < batch.length; i++) {
+            const t = new Date(batch[i].time);
+            const ti = t.getTime();
+            if (minTime === null || ti < minTime) minTime = ti;
+            if (maxTime === null || ti > maxTime) maxTime = ti;
+            if (batch[i].instrument) instrumentsSet[batch[i].instrument] = true;
+        }
+        const instruments = Object.keys(instrumentsSet);
+        const minIso = new Date(minTime).toISOString();
+        const maxIso = new Date(maxTime).toISOString();
+        let existingKeys = {};
+        if (instruments.length > 0) {
+            const sel = await supabaseClient
+                .from('operations')
+                .select('instrument,action,account,e_x,position,quantity,price,commission,time')
+                .eq('user_id', currentUser.id)
+                .in('instrument', instruments)
+                .gte('time', minIso)
+                .lte('time', maxIso);
+            const existing = sel.data || [];
+            for (let i = 0; i < existing.length; i++) { existingKeys[makeOpKeyFromDb(existing[i])] = true; }
+        }
+        const keysInBatch = {};
+        const toInsert = [];
+        let duplicates = 0;
+        for (let i = 0; i < batch.length; i++) {
+            const key = makeOpKeyFromRow(batch[i]);
+            if (existingKeys[key]) { duplicates++; continue; }
+            if (keysInBatch[key]) { duplicates++; continue; }
+            keysInBatch[key] = true;
+            toInsert.push(batch[i]);
+        }
+        if (toInsert.length === 0) { return { inserted: 0, duplicates: duplicates, errors: 0 }; }
+        const res = await supabaseClient.from('operations').insert(toInsert).select('id');
+        if (res.error) { return { inserted: 0, duplicates: duplicates, errors: toInsert.length }; }
+        return { inserted: res.data ? res.data.length : toInsert.length, duplicates: duplicates, errors: 0 };
+    } catch (err) {
+        return { inserted: 0, duplicates: 0, errors: batch.length };
+    }
 }
