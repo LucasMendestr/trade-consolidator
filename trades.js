@@ -331,6 +331,7 @@ async function consolidateTradesForUserBatch() {
     for (let i = 0; i < updates.length; i++) {
         const u = updates[i];
         const chunkSize = 100;
+        let updatedCount = 0;
         for (let start = 0; start < u.opIds.length; start += chunkSize) {
             const chunk = u.opIds.slice(start, start + chunkSize);
             const res = await supabaseClient
@@ -339,7 +340,18 @@ async function consolidateTradesForUserBatch() {
                 .in('id', chunk)
                 .eq('user_id', currentUser.id)
                 .select('id');
-            if (res && res.error) { /* silently ignore here; summary below */ }
+            if (res && !res.error) { updatedCount += (res.data ? res.data.length : 0); }
+        }
+        if (updatedCount === 0) {
+            await supabaseClient
+                .from('operations')
+                .update({ trade_id: u.tradeId })
+                .eq('user_id', currentUser.id)
+                .eq('instrument', (candidates[i] || {}).instrument)
+                .eq('account', (candidates[i] || {}).account)
+                .gte('time', (candidates[i] || {}).start_time)
+                .lte('time', (candidates[i] || {}).end_time)
+                .select('id');
         }
     }
     const insertedCount = Object.keys(tradeIdByKey).length;
