@@ -9,7 +9,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root { --bg:#0f172a; --text:#e5e7eb; --card-bg:#111827; --primary:#22d3ee; --surface:#1f2937; }
         body { font-family: Arial, sans-serif; background: var(--bg); color: var(--text); }
-        .app-container { background: var(--card-bg); padding: 30px; max-width: 1200px; margin: 20px auto; border-radius: 8px; }
+        .app-container { background: var(--card-bg); padding: 30px; width: 100%; margin: 0; border-radius: 0; }
         .app-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ddd; padding-bottom: 20px; margin-bottom: 20px; }
         nav a { margin-right: 12px; color: var(--text); text-decoration: none; font-weight: bold; }
         nav a:hover { text-decoration: underline; }
@@ -38,7 +38,7 @@
             <a href="upload.html">Upload</a>
             <a href="strategies.html">Estratégias</a>
         </nav>
-        <div class="filter-section" style="background: var(--card-bg); padding: 15px; border-radius: 8px; margin: 20px 0;">
+        <div class="filter-section" style="background: var(--card-bg); padding: 15px; border-radius: 8px; margin: 0 0 20px 0;">
             <label>🏦 Filtrar por Conta:</label>
             <select id="accountFilter" onchange="filterTrades()">
                 <option value="">Todas as contas</option>
@@ -48,6 +48,34 @@
                 <select id="strategyFilter" onchange="filterTrades()">
                     <option value="">Todas as estratégias</option>
                 </select>
+            </div>
+            <div style="margin-top:10px; display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+                <div>
+                    <label>🎯 Instrumento:</label>
+                    <select id="instrumentFilter" onchange="filterTrades()">
+                        <option value="">Todos</option>
+                    </select>
+                </div>
+                <div>
+                    <label>📅 Período:</label>
+                    <select id="datePreset" onchange="filterTrades()">
+                        <option value="">Todos</option>
+                        <option value="this_week">Essa semana</option>
+                        <option value="last_week">Semana passada</option>
+                        <option value="this_month">Esse mês</option>
+                        <option value="last_month">Mês passado</option>
+                        <option value="this_year">Esse ano</option>
+                        <option value="last_year">Ano passado</option>
+                    </select>
+                </div>
+                <div>
+                    <label>De:</label>
+                    <input type="date" id="dateFrom" onchange="filterTrades()" style="padding:8px; border:1px solid #334155; border-radius:4px; background: var(--surface); color: var(--text);">
+                </div>
+                <div>
+                    <label>Até:</label>
+                    <input type="date" id="dateTo" onchange="filterTrades()" style="padding:8px; border:1px solid #334155; border-radius:4px; background: var(--surface); color: var(--text);">
+                </div>
             </div>
         </div>
         <div id="tableScrollTop" class="scroll-top"><div id="tableScrollTopInner"></div></div>
