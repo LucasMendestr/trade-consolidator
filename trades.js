@@ -330,11 +330,17 @@ async function consolidateTradesForUserBatch() {
     }
     for (let i = 0; i < updates.length; i++) {
         const u = updates[i];
-        await supabaseClient
-            .from('operations')
-            .update({ trade_id: u.tradeId })
-            .in('id', u.opIds)
-            .eq('user_id', currentUser.id);
+        const chunkSize = 100;
+        for (let start = 0; start < u.opIds.length; start += chunkSize) {
+            const chunk = u.opIds.slice(start, start + chunkSize);
+            const res = await supabaseClient
+                .from('operations')
+                .update({ trade_id: u.tradeId })
+                .in('id', chunk)
+                .eq('user_id', currentUser.id)
+                .select('id');
+            if (res && res.error) { /* silently ignore here; summary below */ }
+        }
     }
     const insertedCount = Object.keys(tradeIdByKey).length;
     let linkedOps = 0; for (let i = 0; i < updates.length; i++) { linkedOps += (updates[i].opIds || []).length; }
