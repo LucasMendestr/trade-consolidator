@@ -199,6 +199,123 @@ async function consolidateTradesForUser() {
         }
     }
 }
+async function consolidateTradesForUserBatch() {
+    if (!supabaseClient || !currentUser) return;
+    const opsRes = await supabaseClient
+        .from('operations')
+        .select('id,user_id,instrument,account,action,e_x,quantity,price,commission,time,position')
+        .eq('user_id', currentUser.id)
+        .order('time');
+    const operations = opsRes.data || [];
+    if (!operations || operations.length === 0) return;
+    const grouped = {};
+    for (let i = 0; i < operations.length; i++) {
+        const op = operations[i];
+        const key = (op.instrument || '') + '|' + (op.account || '');
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(op);
+    }
+    const candidates = [];
+    for (const key in grouped) {
+        const ops = grouped[key];
+        let tradeOpen = null;
+        for (let i = 0; i < ops.length; i++) {
+            const op = ops[i];
+            if (!tradeOpen) {
+                if (op.e_x === 'Entry') {
+                    tradeOpen = { instrument: op.instrument, type: op.action === 'Buy' ? 'LONG' : 'SHORT', entries: [op], exits: [], account: op.account, startTime: op.time, endTime: null, status: 'Open' };
+                }
+            } else {
+                if (op.e_x === 'Entry') {
+                    tradeOpen.entries.push(op);
+                } else {
+                    tradeOpen.exits.push(op);
+                    let entryQty = 0; for (let j = 0; j < tradeOpen.entries.length; j++) { entryQty += parseFloat(tradeOpen.entries[j].quantity || 0); }
+                    let exitQty = 0; for (let j = 0; j < tradeOpen.exits.length; j++) { exitQty += parseFloat(tradeOpen.exits[j].quantity || 0); }
+                    if (entryQty <= exitQty) {
+                        let avgEntryNumerator = 0; for (let j = 0; j < tradeOpen.entries.length; j++) { const e = tradeOpen.entries[j]; avgEntryNumerator += parseFloat(e.price) * parseFloat(e.quantity); }
+                        const avgEntry = avgEntryNumerator / (entryQty || 1);
+                        let avgExitNumerator = 0; for (let j = 0; j < tradeOpen.exits.length; j++) { const e = tradeOpen.exits[j]; avgExitNumerator += parseFloat(e.price) * parseFloat(e.quantity); }
+                        const avgExit = avgExitNumerator / (exitQty || 1);
+                        const pointsDiff = avgExit - avgEntry;
+                        let totalComm = 0; for (let j = 0; j < tradeOpen.entries.length; j++) { totalComm += parseFloat(tradeOpen.entries[j].commission || 0); } for (let j = 0; j < tradeOpen.exits.length; j++) { totalComm += parseFloat(tradeOpen.exits[j].commission || 0); }
+                        const instrumentCode = (tradeOpen.instrument || '').substring(0, 3);
+                        const multipliers = { 'NQ': 20, 'MNQ': 2, 'GC': 100, 'MGC': 10 };
+                        const mult = multipliers[instrumentCode] || 10;
+                        const pnlDollars = (pointsDiff * entryQty * mult) - totalComm;
+                        const startIso = new Date(tradeOpen.startTime).toISOString();
+                        const endIso = new Date(op.time).toISOString();
+                        candidates.push({ instrument: tradeOpen.instrument, account: tradeOpen.account, type: tradeOpen.type, start_time: startIso, end_time: endIso, status: 'Closed', avg_price_entry: avgEntry, avg_price_exit: avgExit, total_qty_entry: entryQty, total_qty_exit: exitQty, pnl_points: (pointsDiff * entryQty), pnl_dollars: pnlDollars, total_commissions: totalComm, opIds: tradeOpen.entries.concat(tradeOpen.exits).map(function(o){ return o.id; }) });
+                        tradeOpen = null;
+                    }
+                }
+            }
+        }
+    }
+    if (candidates.length === 0) return;
+    const instrumentsSet = {}; let minTime = null; let maxTime = null;
+    for (let i = 0; i < candidates.length; i++) {
+        const c = candidates[i];
+        if (c.instrument) instrumentsSet[c.instrument] = true;
+        const s = new Date(c.start_time).getTime(); const e = new Date(c.end_time).getTime();
+        if (minTime === null || s < minTime) minTime = s; if (minTime === null || e < minTime) minTime = e;
+        if (maxTime === null || s > maxTime) maxTime = s; if (maxTime === null || e > maxTime) maxTime = e;
+    }
+    const instruments = Object.keys(instrumentsSet);
+    const minIso = new Date(minTime).toISOString();
+    const maxIso = new Date(maxTime).toISOString();
+    function kTrade(x) { return (x.instrument || '') + '|' + (x.account || '') + '|' + (x.type || '') + '|' + (x.start_time || '') + '|' + (x.end_time || ''); }
+    const existingMap = {};
+    if (instruments.length > 0) {
+        const sel = await supabaseClient
+            .from('trades')
+            .select('id,instrument,account,type,start_time,end_time')
+            .eq('user_id', currentUser.id)
+            .in('instrument', instruments)
+            .gte('start_time', minIso)
+            .lte('end_time', maxIso);
+        const existing = sel.data || [];
+        for (let i = 0; i < existing.length; i++) { const x = existing[i]; existingMap[(x.instrument || '') + '|' + (x.account || '') + '|' + (x.type || '') + '|' + (x.start_time || '') + '|' + (x.end_time || '')] = x.id; }
+    }
+    const toInsert = []; const keysForInsert = []; const tradeIdByKey = {};
+    for (let i = 0; i < candidates.length; i++) {
+        const key = kTrade(candidates[i]);
+        const exId = existingMap[key];
+        if (exId) { tradeIdByKey[key] = exId; }
+        else {
+            toInsert.push({ user_id: currentUser.id, instrument: candidates[i].instrument, account: candidates[i].account, type: candidates[i].type, start_time: candidates[i].start_time, end_time: candidates[i].end_time, status: candidates[i].status, avg_price_entry: candidates[i].avg_price_entry, avg_price_exit: candidates[i].avg_price_exit, total_qty_entry: candidates[i].total_qty_entry, total_qty_exit: candidates[i].total_qty_exit, pnl_points: candidates[i].pnl_points, pnl_dollars: candidates[i].pnl_dollars, total_commissions: candidates[i].total_commissions });
+            keysForInsert.push(key);
+        }
+    }
+    if (toInsert.length > 0) {
+        const ins = await supabaseClient
+            .from('trades')
+            .insert(toInsert)
+            .select('id,instrument,account,type,start_time,end_time');
+        const rows = ins.data || [];
+        for (let i = 0; i < rows.length; i++) {
+            const r = rows[i];
+            tradeIdByKey[(r.instrument || '') + '|' + (r.account || '') + '|' + (r.type || '') + '|' + (r.start_time || '') + '|' + (r.end_time || '')] = r.id;
+        }
+    }
+    const updates = [];
+    for (let i = 0; i < candidates.length; i++) {
+        const key = kTrade(candidates[i]);
+        const tId = tradeIdByKey[key];
+        if (!tId) continue;
+        const ids = candidates[i].opIds || [];
+        if (ids.length === 0) continue;
+        updates.push({ tradeId: tId, opIds: ids });
+    }
+    for (let i = 0; i < updates.length; i++) {
+        const u = updates[i];
+        await supabaseClient
+            .from('operations')
+            .update({ trade_id: u.tradeId })
+            .in('id', u.opIds)
+            .eq('user_id', currentUser.id);
+    }
+}
 async function applyStrategyBulk() {
     if (!supabaseClient || !currentUser) return;
     const bulk = document.getElementById('bulkStrategySelect');

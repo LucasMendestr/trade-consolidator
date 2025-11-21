@@ -112,7 +112,7 @@ async function processCSV(csv) {
         '<div id="uploadErrorsPanel" style="display:none; margin-top:10px; background: #1f2937; color:#e5e7eb; padding:10px; border-radius:4px; max-height:280px; overflow:auto;"></div>';
     document.getElementById('uploadMessage').innerHTML = statusHtml;
     setUploadErrorsDownloadLink(tracker);
-    try { await consolidateTradesForUser(); } catch (e) {}
+    try { await consolidateTradesForUserBatch(); } catch (e) {}
     await loadDataFromSupabase();
 }
 
