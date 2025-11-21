@@ -43,6 +43,14 @@ function populateStrategyFilter() {
         filter.innerHTML += '<option value="' + s.id + '">' + s.name + '</option>';
     }
     filter.value = currentValue;
+
+    const bulk = document.getElementById('bulkStrategySelect');
+    if (bulk) {
+        const bulkVal = bulk.value;
+        bulk.innerHTML = '<option value="">Selecione a estratégia</option>';
+        for (let i = 0; i < (allStrategies || []).length; i++) { const s = allStrategies[i]; bulk.innerHTML += '<option value="' + s.id + '">' + s.name + '</option>'; }
+        bulk.value = bulkVal;
+    }
 }
 
 function populateInstrumentFilter() {
@@ -190,4 +198,26 @@ async function consolidateTradesForUser() {
             }
         }
     }
+}
+async function applyStrategyBulk() {
+    if (!supabaseClient || !currentUser) return;
+    const bulk = document.getElementById('bulkStrategySelect');
+    if (!bulk || !bulk.value) return;
+    const checkboxes = document.querySelectorAll('.trade-select:checked');
+    const ids = Array.prototype.map.call(checkboxes, function(el){ return el.value; }).filter(function(v){ return v; });
+    if (ids.length === 0) return;
+    const res = await supabaseClient
+        .from('trades')
+        .update({ strategy_id: bulk.value })
+        .in('id', ids)
+        .eq('user_id', currentUser.id)
+        .select('id');
+    if (res && res.error) return;
+    for (let i = 0; i < filteredTrades.length; i++) { if (ids.indexOf(filteredTrades[i].id) !== -1) { filteredTrades[i].strategy_id = bulk.value; } }
+    updateTradesTable();
+}
+
+function toggleSelectAllTrades(el) {
+    const checks = document.querySelectorAll('.trade-select');
+    for (let i = 0; i < checks.length; i++) { if (!checks[i].disabled) checks[i].checked = el.checked; }
 }

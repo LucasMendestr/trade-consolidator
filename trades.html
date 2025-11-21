@@ -80,9 +80,10 @@
         </div>
         <div id="tableScrollTop" class="scroll-top"><div id="tableScrollTopInner"></div></div>
         <div id="tableScrollBottom" class="scroll-bottom">
-            <table id="tradesTable">
+                <table id="tradesTable">
                 <thead>
                     <tr>
+                        <th>Sel.</th>
                         <th>Status</th>
                         <th>Conta</th>
                         <th>Instrumento</th>
@@ -96,9 +97,18 @@
                     </tr>
                 </thead>
                 <tbody id="tradesBody">
-                    <tr><td colspan="10" class="loading">Nenhum trade</td></tr>
+                    <tr><td colspan="11" class="loading">Nenhum trade</td></tr>
                 </tbody>
             </table>
+        </div>
+
+        <div style="margin-top: 15px; background: var(--card-bg); padding: 15px; border-radius: 8px;">
+            <label style="margin-right:8px;">Seleção em massa:</label>
+            <label style="margin-right:10px;"><input type="checkbox" id="selectAllTrades" onclick="toggleSelectAllTrades(this)"> Selecionar todos</label>
+            <select id="bulkStrategySelect" style="padding:8px; border:1px solid #334155; border-radius:4px; background: var(--surface); color: var(--text);">
+                <option value="">Selecione a estratégia</option>
+            </select>
+            <button class="btn" style="background:#22d3ee; color:#0b1020; margin-left:10px;" onclick="applyStrategyBulk()">Aplicar</button>
         </div>
         <div id="tradeDetails" style="display:none; margin-top:30px; background: var(--card-bg); padding: 20px; border-radius: 8px; border-left: 5px solid var(--primary);">
             <div class="detail-header" style="display:flex; justify-content: space-between; align-items:center; margin-bottom:20px;">

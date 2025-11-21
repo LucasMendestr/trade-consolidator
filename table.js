@@ -17,6 +17,7 @@ function updateTradesTable() {
         selectHtml += '</select>';
         tableHtml += 
             '<tr onclick="showTradeDetails(' + i + ')" style="cursor: pointer;">' +
+            '<td><input type="checkbox" class="trade-select" value="' + (t.id || '') + '"' + (!t.id ? ' disabled' : '') + ' onclick="event.stopPropagation()"></td>' +
             '<td><span class="' + statusClass + '">' + t.status + '</span></td>' +
             '<td>' + t.account + '</td>' +
             '<td>' + t.instrument + '</td>' +
@@ -29,7 +30,7 @@ function updateTradesTable() {
             '<td>' + (t.id ? selectHtml : '-') + '</td>' +
             '</tr>';
     }
-    if (tableHtml === '') { tradesBody.innerHTML = '<tr><td colspan="10" class="loading">Nenhum trade</td></tr>'; }
+    if (tableHtml === '') { tradesBody.innerHTML = '<tr><td colspan="11" class="loading">Nenhum trade</td></tr>'; }
     else { tradesBody.innerHTML = tableHtml; }
 
     const top = document.getElementById('tableScrollTop');
