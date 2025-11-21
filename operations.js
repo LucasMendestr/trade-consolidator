@@ -91,7 +91,8 @@ async function processCSV(csv) {
                 e_x: op['E/X'],
                 position: op.Position,
                 commission: com,
-                account: op.Account
+                account: op.Account,
+                source_id: getSourceId(op)
             };
             batch.push(row);
             if (batch.length >= batchSize) {
@@ -130,14 +131,17 @@ function makeOpKeyFromRow(row) {
     const q = parseFloat(row.quantity || 0).toFixed(6);
     const p = parseFloat(row.price || 0).toFixed(6);
     const c = parseFloat(row.commission || 0).toFixed(6);
-    return (row.instrument || '') + '|' + (row.action || '') + '|' + (row.account || '') + '|' + (row.e_x || '') + '|' + (row.position || '') + '|' + q + '|' + p + '|' + c + '|' + (row.time || '');
+    const sid = row.source_id || '';
+    return sid ? ('SID|' + sid) : ((row.instrument || '') + '|' + (row.action || '') + '|' + (row.account || '') + '|' + (row.e_x || '') + '|' + (row.position || '') + '|' + q + '|' + p + '|' + c + '|' + (row.time || ''));
 }
 
 function makeOpKeyFromDb(op) {
     const q = parseFloat(op.quantity || 0).toFixed(6);
     const p = parseFloat(op.price || 0).toFixed(6);
     const c = parseFloat(op.commission || 0).toFixed(6);
-    const t = String(op.time || '');
+    const sid = op.source_id || '';
+    if (sid) return 'SID|' + sid;
+    const t = new Date(op.time).toISOString();
     return (op.instrument || '') + '|' + (op.action || '') + '|' + (op.account || '') + '|' + (op.e_x || '') + '|' + (op.position || '') + '|' + q + '|' + p + '|' + c + '|' + t;
 }
 
@@ -153,6 +157,33 @@ async function dedupAndInsertBatch(batch) {
             if (batch[i].instrument) instrumentsSet[batch[i].instrument] = true;
         }
         const instruments = Object.keys(instrumentsSet);
+        const sourceIds = [];
+        for (let i = 0; i < batch.length; i++) { const sid = batch[i].source_id || ''; if (sid) sourceIds.push(sid); }
+        if (sourceIds.length > 0) {
+            const sel = await supabaseClient
+                .from('operations')
+                .select('source_id')
+                .eq('user_id', currentUser.id)
+                .in('source_id', sourceIds);
+            const existing = sel.data || [];
+            const existingSet = {};
+            for (let i = 0; i < existing.length; i++) { existingSet[existing[i].source_id] = true; }
+            const keysInBatch = {};
+            const toInsert = [];
+            let duplicates = 0;
+            for (let i = 0; i < batch.length; i++) {
+                const sid = batch[i].source_id || '';
+                const key = sid || makeOpKeyFromRow(batch[i]);
+                if (sid && existingSet[sid]) { duplicates++; continue; }
+                if (keysInBatch[key]) { duplicates++; continue; }
+                keysInBatch[key] = true;
+                toInsert.push(batch[i]);
+            }
+            if (toInsert.length === 0) { return { inserted: 0, duplicates: duplicates, errors: 0, errorDetails: [] }; }
+            const res = await supabaseClient.from('operations').insert(toInsert).select('id');
+            if (res.error) { return { inserted: 0, duplicates: duplicates, errors: toInsert.length, errorDetails: [{ line: null, type: 'insert', message: res.error.message }] }; }
+            return { inserted: res.data ? res.data.length : toInsert.length, duplicates: duplicates, errors: 0, errorDetails: [] };
+        }
         const accountsSet = {}; for (let i = 0; i < batch.length; i++) { const acc = batch[i].account || ''; if (acc) accountsSet[acc] = true; }
         const accounts = Object.keys(accountsSet);
         const minIso = new Date(minTime).toISOString();
@@ -161,7 +192,7 @@ async function dedupAndInsertBatch(batch) {
         if (instruments.length > 0) {
             let query = supabaseClient
                 .from('operations')
-                .select('instrument,action,account,e_x,position,quantity,price,commission,time')
+                .select('instrument,action,account,e_x,position,quantity,price,commission,time,source_id')
                 .eq('user_id', currentUser.id)
                 .in('instrument', instruments)
                 .gte('time', minIso)
@@ -220,4 +251,9 @@ function setUploadErrorsDownloadLink(tracker) {
         const url = URL.createObjectURL(blob);
         a.href = url;
     } catch (e) {}
+}
+function getSourceId(op) {
+    const keys = ['ID','Id','Order','OrderID','Order Id','ExecutionID','ExecID','TradeID','Trade Id'];
+    for (let i = 0; i < keys.length; i++) { const v = op[keys[i]]; if (v != null && String(v).trim() !== '') return String(v).trim(); }
+    return null;
 }
