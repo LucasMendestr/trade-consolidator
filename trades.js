@@ -243,9 +243,9 @@ async function consolidateTradesForUserBatch() {
                         const multipliers = { 'NQ': 20, 'MNQ': 2, 'GC': 100, 'MGC': 10 };
                         const mult = multipliers[instrumentCode] || 10;
                         const pnlDollars = (pointsDiff * entryQty * mult) - totalComm;
-                        const startStr = String(tradeOpen.startTime || '');
-                        const endStr = String(op.time || '');
-                        candidates.push({ instrument: tradeOpen.instrument, account: tradeOpen.account, type: tradeOpen.type, start_time: startStr, end_time: endStr, status: 'Closed', avg_price_entry: avgEntry, avg_price_exit: avgExit, total_qty_entry: entryQty, total_qty_exit: exitQty, pnl_points: (pointsDiff * entryQty), pnl_dollars: pnlDollars, total_commissions: totalComm, opIds: tradeOpen.entries.concat(tradeOpen.exits).map(function(o){ return o.id; }) });
+                        const startIso = new Date(tradeOpen.startTime).toISOString();
+                        const endIso = new Date(op.time).toISOString();
+                        candidates.push({ instrument: tradeOpen.instrument, account: tradeOpen.account, type: tradeOpen.type, start_time: startIso, end_time: endIso, status: 'Closed', avg_price_entry: avgEntry, avg_price_exit: avgExit, total_qty_entry: entryQty, total_qty_exit: exitQty, pnl_points: (pointsDiff * entryQty), pnl_dollars: pnlDollars, total_commissions: totalComm, opIds: tradeOpen.entries.concat(tradeOpen.exits).map(function(o){ return o.id; }) });
                         tradeOpen = null;
                     }
                 }
@@ -253,14 +253,19 @@ async function consolidateTradesForUserBatch() {
         }
     }
     if (candidates.length === 0) return;
-    const instrumentsSet = {}; const accountsSet = {};
+    const instrumentsSet = {}; const accountsSet = {}; let minTime = null; let maxTime = null;
     for (let i = 0; i < candidates.length; i++) {
         const c = candidates[i];
         if (c.instrument) instrumentsSet[c.instrument] = true;
         if (c.account) accountsSet[c.account] = true;
+        const s = new Date(c.start_time).getTime(); const e = new Date(c.end_time).getTime();
+        if (minTime === null || s < minTime) minTime = s; if (minTime === null || e < minTime) minTime = e;
+        if (maxTime === null || s > maxTime) maxTime = s; if (maxTime === null || e > maxTime) maxTime = e;
     }
     const instruments = Object.keys(instrumentsSet);
     const accounts = Object.keys(accountsSet);
+    const minIso = new Date(minTime).toISOString();
+    const maxIso = new Date(maxTime).toISOString();
     function kTrade(x) { return (x.instrument || '') + '|' + (x.account || '') + '|' + (x.type || '') + '|' + (x.start_time || '') + '|' + (x.end_time || ''); }
     const existingMap = {};
     if (instruments.length > 0) {
@@ -269,7 +274,9 @@ async function consolidateTradesForUserBatch() {
             .select('id,instrument,account,type,start_time,end_time')
             .eq('user_id', currentUser.id)
             .in('instrument', instruments)
-            .in('account', accounts);
+            .in('account', accounts)
+            .gte('start_time', minIso)
+            .lte('end_time', maxIso);
         const existing = sel.data || [];
         for (let i = 0; i < existing.length; i++) { const x = existing[i]; existingMap[(x.instrument || '') + '|' + (x.account || '') + '|' + (x.type || '') + '|' + (x.start_time || '') + '|' + (x.end_time || '')] = x.id; }
     }

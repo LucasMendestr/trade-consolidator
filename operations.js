@@ -31,18 +31,30 @@ async function isDuplicateOperation(operation) {
 function normalizeNumber(n) { if (typeof n !== 'string') return n; return parseFloat(n.replace('.', '').replace(',', '.')); }
 function toIsoUTC(s) {
     if (!s) return null;
-    const dIso = new Date(s);
-    if (!isNaN(dIso.getTime())) { return dIso.toISOString(); }
-    const m = String(s).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    const raw = String(s).trim();
+    const direct = new Date(raw);
+    if (!isNaN(direct.getTime())) { return direct.toISOString(); }
+    let m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.(\d{1,3}))?$/);
     if (m) {
-        const day = parseInt(m[1], 10);
-        const mon = parseInt(m[2], 10) - 1;
-        const yr = parseInt(m[3], 10);
-        const hr = parseInt(m[4], 10);
-        const min = parseInt(m[5], 10);
-        const sec = m[6] != null ? parseInt(m[6], 10) : 0;
-        const d = new Date(yr, mon, day, hr, min, sec, 0);
-        if (!isNaN(d.getTime())) { return d.toISOString(); }
+        const d = new Date(parseInt(m[3],10), parseInt(m[2],10)-1, parseInt(m[1],10), parseInt(m[4],10), parseInt(m[5],10), m[6]?parseInt(m[6],10):0, m[7]?parseInt(m[7],10):0);
+        if (!isNaN(d.getTime())) return d.toISOString();
+    }
+    m = raw.match(/^(\d{1,2})-(\d{1,2})-(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.(\d{1,3}))?$/);
+    if (m) {
+        const d = new Date(parseInt(m[3],10), parseInt(m[2],10)-1, parseInt(m[1],10), parseInt(m[4],10), parseInt(m[5],10), m[6]?parseInt(m[6],10):0, m[7]?parseInt(m[7],10):0);
+        if (!isNaN(d.getTime())) return d.toISOString();
+    }
+    m = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.(\d{1,3}))?)?$/);
+    if (m) {
+        const y = parseInt(m[1],10), mo = parseInt(m[2],10)-1, da = parseInt(m[3],10);
+        const hh = m[4]?parseInt(m[4],10):0, mm = m[5]?parseInt(m[5],10):0, ss = m[6]?parseInt(m[6],10):0, ms = m[7]?parseInt(m[7],10):0;
+        const d = new Date(y, mo, da, hh, mm, ss, ms);
+        if (!isNaN(d.getTime())) return d.toISOString();
+    }
+    m = raw.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    if (m) {
+        const d = new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10), parseInt(m[4],10), parseInt(m[5],10), m[6]?parseInt(m[6],10):0, 0);
+        if (!isNaN(d.getTime())) return d.toISOString();
     }
     return null;
 }
@@ -75,7 +87,7 @@ async function processCSV(csv) {
                 action: op.Action,
                 quantity: qty,
                 price: prc,
-                time: String(op.Time).trim(),
+                time: toIsoUTC(op.Time),
                 e_x: op['E/X'],
                 position: op.Position,
                 commission: com,
@@ -141,16 +153,19 @@ async function dedupAndInsertBatch(batch) {
             if (batch[i].instrument) instrumentsSet[batch[i].instrument] = true;
         }
         const instruments = Object.keys(instrumentsSet);
-        let existingKeys = {};
-        const accountsSet = {};
-        for (let i = 0; i < batch.length; i++) { const acc = batch[i].account || ''; if (acc) accountsSet[acc] = true; }
+        const accountsSet = {}; for (let i = 0; i < batch.length; i++) { const acc = batch[i].account || ''; if (acc) accountsSet[acc] = true; }
         const accounts = Object.keys(accountsSet);
+        const minIso = new Date(minTime).toISOString();
+        const maxIso = new Date(maxTime).toISOString();
+        let existingKeys = {};
         if (instruments.length > 0) {
             let query = supabaseClient
                 .from('operations')
                 .select('instrument,action,account,e_x,position,quantity,price,commission,time')
                 .eq('user_id', currentUser.id)
-                .in('instrument', instruments);
+                .in('instrument', instruments)
+                .gte('time', minIso)
+                .lte('time', maxIso);
             if (accounts.length > 0) { query = query.in('account', accounts); }
             const sel = await query;
             const existing = sel.data || [];
