@@ -344,6 +344,7 @@ async function consolidateTradesForUserBatch() {
         updates.push({ tradeId: tId, tradeSeq: tSeq, opIds: ids });
     }
     const linkLogs = [];
+    let opsUpdatedTotal = 0; let opsUpdatedByIds = 0; let opsUpdatedBySource = 0; let opsUpdatedByRange = 0;
     for (let i = 0; i < updates.length; i++) {
         const u = updates[i];
         const cand = candidates[i] || {};
@@ -358,7 +359,7 @@ async function consolidateTradesForUserBatch() {
                 .eq('user_id', currentUser.id)
                 .select('id');
             linkLogs.push({ type: 'update_by_ids', tradeId: u.tradeId, chunkCount: chunk.length, affected: res && res.data ? res.data.length : 0, error: res && res.error ? res.error.message : null });
-            if (res && !res.error) { updatedCount += (res.data ? res.data.length : 0); }
+            if (res && !res.error) { const n = (res.data ? res.data.length : 0); updatedCount += n; opsUpdatedTotal += n; opsUpdatedByIds += n; }
         }
         if (updatedCount === 0 && (cand.opSourceIds || []).length > 0) {
             for (let start = 0; start < cand.opSourceIds.length; start += chunkSize) {
@@ -370,7 +371,7 @@ async function consolidateTradesForUserBatch() {
                     .eq('user_id', currentUser.id)
                     .select('id');
                 linkLogs.push({ type: 'update_by_source_id', tradeId: u.tradeId, chunkCount: sChunk.length, affected: res2 && res2.data ? res2.data.length : 0, error: res2 && res2.error ? res2.error.message : null });
-                if (res2 && !res2.error) { updatedCount += (res2.data ? res2.data.length : 0); }
+                if (res2 && !res2.error) { const n2 = (res2.data ? res2.data.length : 0); updatedCount += n2; opsUpdatedTotal += n2; opsUpdatedBySource += n2; }
             }
         }
         if (updatedCount === 0) {
@@ -384,11 +385,13 @@ async function consolidateTradesForUserBatch() {
                 .lte('time', cand.end_time)
                 .select('id');
             linkLogs.push({ type: 'update_by_range', tradeId: u.tradeId, instrument: cand.instrument, account: cand.account, start: cand.start_time, end: cand.end_time, affected: res3 && res3.data ? res3.data.length : 0, error: res3 && res3.error ? res3.error.message : null });
+            if (res3 && !res3.error) { const n3 = (res3.data ? res3.data.length : 0); opsUpdatedTotal += n3; opsUpdatedByRange += n3; }
         }
     }
     const insertedCount = Object.keys(tradeIdByKey).length;
     let linkedOps = 0; for (let i = 0; i < updates.length; i++) { linkedOps += (updates[i].opIds || []).length; }
-    const summaryHtml = '<div class="success">✅ Trades consolidados: ' + insertedCount + ' inseridos, ' + (candidates.length - insertedCount) + ' duplicatas, ' + linkedOps + ' operações vinculadas</div>' +
+    const summaryHtml = '<div class="success">✅ Trades consolidados: ' + insertedCount + ' inseridos, ' + (candidates.length - insertedCount) + ' duplicatas</div>' +
+        '<div class="success">🔗 Operações atualizadas: ' + opsUpdatedTotal + ' de ' + linkedOps + ' (IDs: ' + opsUpdatedByIds + ', source_id: ' + opsUpdatedBySource + ', intervalo: ' + opsUpdatedByRange + ')</div>' +
         '<div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">' +
         '<button class="btn btn-secondary" onclick="toggleTradeErrors()">Ver detalhes da consolidação</button>' +
         '<a id="downloadTradeErrors" class="btn btn-secondary" href="#" download="trade-consolidation-log.json">Baixar log</a>' +
@@ -396,7 +399,7 @@ async function consolidateTradesForUserBatch() {
         '<div id="tradeErrorsPanel" style="display:none; margin-top:10px; background: #1f2937; color:#e5e7eb; padding:10px; border-radius:4px; max-height:280px; overflow:auto;"></div>';
     const msgEl = document.getElementById('uploadMessage');
     if (msgEl) { const prev = msgEl.innerHTML; msgEl.innerHTML = prev + summaryHtml; }
-    window.lastTradeErrors = { summary: { inserted: insertedCount, duplicates: (candidates.length - insertedCount), updates: linkedOps }, details: linkLogs };
+    window.lastTradeErrors = { summary: { inserted: insertedCount, duplicates: (candidates.length - insertedCount), opsUpdated: opsUpdatedTotal, requested: linkedOps, byIds: opsUpdatedByIds, bySource: opsUpdatedBySource, byRange: opsUpdatedByRange }, details: linkLogs };
     setTradeErrorsDownloadLink(window.lastTradeErrors);
 }
 
