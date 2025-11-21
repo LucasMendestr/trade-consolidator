@@ -2,7 +2,9 @@ async function loadStrategies() {
     if (!supabaseClient || !currentUser) return;
     const res = await supabaseClient.from('strategies').select('*').eq('user_id', currentUser.id).order('name');
     if (!res.error) { allStrategies = res.data || []; }
-    renderStrategiesGrid();
+    renderStrategiesTable();
+    try { populateStrategyFilter(); } catch (e) {}
+    try { if (document.getElementById('tradesBody')) updateTradesTable(); } catch (e) {}
 }
 
 async function handleCreateStrategy() {
@@ -32,25 +34,25 @@ async function assignStrategyToTrade(tradeId, strategyId) {
     updateTradesTable();
 }
 
-function renderStrategiesGrid() {
-    const grid = document.getElementById('strategiesGrid');
-    if (!grid) return;
-    if (!allStrategies || allStrategies.length === 0) { grid.innerHTML = '<div class="loading">Nenhuma estratégia</div>'; return; }
+function renderStrategiesTable() {
+    const body = document.getElementById('strategiesTableBody');
+    if (!body) return;
+    if (!allStrategies || allStrategies.length === 0) { body.innerHTML = '<tr><td colspan="5" class="loading">Nenhuma estratégia</td></tr>'; return; }
     let html = '';
     for (let i = 0; i < allStrategies.length; i++) {
         const s = allStrategies[i];
-        html += '<div style="background: var(--surface); border: 1px solid #334155; border-radius: 8px; padding: 14px; display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">' +
-            '<div style="font-size:18px; font-weight:bold; color: var(--text);">' + (s.name || '-') + '</div>' +
-            '<div style="font-size:13px; color: #9ca3af;">Timeframe: ' + (s.timeframe || '-') + '</div>' +
-            '<div style="font-size:13px; color: #9ca3af;">RR esperado: ' + (s.risk_reward_expected != null ? s.risk_reward_expected : '-') + '</div>' +
-            '<div style="font-size:13px; color: var(--text);">' + (s.description || '') + '</div>' +
-            '<div style="display:flex; gap:8px; margin-top:6px;">' +
-                '<button class="btn" style="background:#22d3ee; color:#0b1020;" onclick="editStrategy(\'' + s.id + '\')">Editar</button>' +
+        html += '<tr>' +
+            '<td style="padding:12px; border-bottom:1px solid #334155; color: var(--text);">' + (s.name || '-') + '</td>' +
+            '<td style="padding:12px; border-bottom:1px solid #334155; color: #9ca3af;">' + (s.timeframe || '-') + '</td>' +
+            '<td style="padding:12px; border-bottom:1px solid #334155; color: #9ca3af;">' + (s.risk_reward_expected != null ? s.risk_reward_expected : '-') + '</td>' +
+            '<td style="padding:12px; border-bottom:1px solid #334155; color: var(--text);">' + (s.description || '') + '</td>' +
+            '<td style="padding:12px; border-bottom:1px solid #334155;">' +
+                '<button class="btn" style="background:#22d3ee; color:#0b1020; margin-right:8px;" onclick="editStrategy(\'' + s.id + '\')">Editar</button>' +
                 '<button class="btn" style="background:#ef4444; color:white;" onclick="deleteStrategy(\'' + s.id + '\')">Excluir</button>' +
-            '</div>' +
-        '</div>';
+            '</td>' +
+        '</tr>';
     }
-    grid.innerHTML = html;
+    body.innerHTML = html;
 }
 
 async function editStrategy(id) {

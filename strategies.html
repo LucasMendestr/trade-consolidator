@@ -44,7 +44,19 @@
         </div>
 
         <h2 style="margin: 20px 0 10px 0;">Estratégias Criadas</h2>
-        <div id="strategiesGrid" style="display:block;">
+        <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse;">
+                <thead>
+                    <tr>
+                        <th style="background: var(--surface); padding: 12px; text-align:left; border-bottom: 2px solid #334155; color: var(--text);">Nome</th>
+                        <th style="background: var(--surface); padding: 12px; text-align:left; border-bottom: 2px solid #334155; color: var(--text);">Timeframe</th>
+                        <th style="background: var(--surface); padding: 12px; text-align:left; border-bottom: 2px solid #334155; color: var(--text);">RR Esperado</th>
+                        <th style="background: var(--surface); padding: 12px; text-align:left; border-bottom: 2px solid #334155; color: var(--text);">Descrição</th>
+                        <th style="background: var(--surface); padding: 12px; text-align:left; border-bottom: 2px solid #334155; color: var(--text);">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="strategiesTableBody"></tbody>
+            </table>
         </div>
     </div>
     <script src="globals.js"></script>
