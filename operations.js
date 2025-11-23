@@ -2,7 +2,13 @@ async function handleFileUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = async function(e) { try { await processCSV(e.target.result); } catch (err) { document.getElementById('uploadMessage').innerHTML = '<div class="error">Erro: ' + err.message + '</div>'; } };
+    reader.onload = async function(e) {
+        try { await processCSV(e.target.result); }
+        catch (err) {
+            const el = document.getElementById('uploadMessage');
+            if (el) { el.textContent = 'Erro: ' + (err && err.message ? err.message : 'Falha ao processar arquivo'); el.className = 'error'; }
+        }
+    };
     reader.readAsText(file);
 }
 

@@ -5,6 +5,7 @@ function updateTradesTable() {
     if (!tradesBody) {
         return;
     }
+    function escapeHtml(s){ return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
     let tableHtml = '';
     for (let i = 0; i < filteredTrades.length; i++) {
         const t = filteredTrades[i];
@@ -12,16 +13,16 @@ function updateTradesTable() {
         const pnlClass = parseFloat(t.pnlDollars || 0) >= 0 ? 'pnl-positive' : 'pnl-negative';
         const endTimeFormatted = formatDate(t.endTime);
         const currentSid = t.strategy_id || '';
-        let selectHtml = '<select onchange="assignStrategyToTrade(\'' + (t.id || '') + '\', this.value)" onclick="event.stopPropagation()">\n<option value="">Selecione</option>';
-        for (let j = 0; j < allStrategies.length; j++) { const s = allStrategies[j]; selectHtml += '<option value="' + s.id + '"' + (s.id === currentSid ? ' selected' : '') + '>' + s.name + '</option>'; }
+        let selectHtml = '<select onchange="assignStrategyToTrade(\'' + escapeHtml(t.id || '') + '\', this.value)" onclick="event.stopPropagation()">\n<option value="">Selecione</option>';
+        for (let j = 0; j < allStrategies.length; j++) { const s = allStrategies[j]; selectHtml += '<option value="' + escapeHtml(s.id) + '"' + (s.id === currentSid ? ' selected' : '') + '>' + escapeHtml(s.name) + '</option>'; }
         selectHtml += '</select>';
         tableHtml += 
             '<tr onclick="showTradeDetails(' + i + ')" style="cursor: pointer;">' +
             '<td><input type="checkbox" class="trade-select" value="' + (t.id || '') + '"' + (!t.id ? ' disabled' : '') + ' onclick="event.stopPropagation()"></td>' +
-            '<td><span class="' + statusClass + '">' + t.status + '</span></td>' +
-            '<td>' + t.account + '</td>' +
-            '<td>' + t.instrument + '</td>' +
-            '<td>' + t.type + '</td>' +
+            '<td><span class="' + statusClass + '">' + escapeHtml(t.status) + '</span></td>' +
+            '<td>' + escapeHtml(t.account) + '</td>' +
+            '<td>' + escapeHtml(t.instrument) + '</td>' +
+            '<td>' + escapeHtml(t.type) + '</td>' +
             '<td>$' + t.avgEntry + '</td>' +
             '<td>$' + (t.avgExit || '-') + '</td>' +
             '<td>' + (t.pnlPoints || '-') + '</td>' +

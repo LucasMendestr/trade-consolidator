@@ -14,10 +14,10 @@ async function handleCreateStrategy() {
     const rr = parseFloat(document.getElementById('strategyRR').value || '');
     const desc = (document.getElementById('strategyDescription').value || '').trim();
     const msg = document.getElementById('strategyMessage');
-    if (!name) { msg.innerHTML = '<div class="error">Informe o nome</div>'; return; }
+    if (!name) { if (msg) { msg.textContent = 'Informe o nome'; msg.className = 'error'; } return; }
     const ins = await supabaseClient.from('strategies').insert([{ user_id: currentUser.id, name: name, description: desc, timeframe: timeframe, risk_reward_expected: isNaN(rr) ? null : rr }]).select('id').single();
-    if (ins.error) { msg.innerHTML = '<div class="error">' + ins.error.message + '</div>'; return; }
-    msg.innerHTML = '<div class="success">Estratégia criada</div>';
+    if (ins.error) { if (msg) { msg.textContent = ins.error.message; msg.className = 'error'; } return; }
+    if (msg) { msg.textContent = 'Estratégia criada'; msg.className = 'success'; }
     document.getElementById('strategyName').value = '';
     document.getElementById('strategyTimeframe').value = '';
     document.getElementById('strategyRR').value = '';
@@ -38,17 +38,18 @@ function renderStrategiesTable() {
     const body = document.getElementById('strategiesTableBody');
     if (!body) return;
     if (!allStrategies || allStrategies.length === 0) { body.innerHTML = '<tr><td colspan="5" class="loading">Nenhuma estratégia</td></tr>'; return; }
+    function escapeHtml(s){ return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
     let html = '';
     for (let i = 0; i < allStrategies.length; i++) {
         const s = allStrategies[i];
         html += '<tr>' +
-            '<td style="padding:12px; border-bottom:1px solid #334155; color: var(--text);">' + (s.name || '-') + '</td>' +
-            '<td style="padding:12px; border-bottom:1px solid #334155; color: #9ca3af;">' + (s.timeframe || '-') + '</td>' +
-            '<td style="padding:12px; border-bottom:1px solid #334155; color: #9ca3af;">' + (s.risk_reward_expected != null ? s.risk_reward_expected : '-') + '</td>' +
-            '<td style="padding:12px; border-bottom:1px solid #334155; color: var(--text);">' + (s.description || '') + '</td>' +
+            '<td style="padding:12px; border-bottom:1px solid #334155; color: var(--text);">' + escapeHtml(s.name || '-') + '</td>' +
+            '<td style="padding:12px; border-bottom:1px solid #334155; color: #9ca3af;">' + escapeHtml(s.timeframe || '-') + '</td>' +
+            '<td style="padding:12px; border-bottom:1px solid #334155; color: #9ca3af;">' + escapeHtml(s.risk_reward_expected != null ? s.risk_reward_expected : '-') + '</td>' +
+            '<td style="padding:12px; border-bottom:1px solid #334155; color: var(--text);">' + escapeHtml(s.description || '') + '</td>' +
             '<td style="padding:12px; border-bottom:1px solid #334155;">' +
-                '<button class="btn" style="background:#22d3ee; color:#0b1020; margin-right:8px;" onclick="editStrategy(\'' + s.id + '\')">Editar</button>' +
-                '<button class="btn" style="background:#ef4444; color:white;" onclick="deleteStrategy(\'' + s.id + '\')">Excluir</button>' +
+                '<button class="btn" style="background:#22d3ee; color:#0b1020; margin-right:8px;" onclick="editStrategy(\'' + escapeHtml(s.id) + '\')">Editar</button>' +
+                '<button class="btn" style="background:#ef4444; color:white;" onclick="deleteStrategy(\'' + escapeHtml(s.id) + '\')">Excluir</button>' +
             '</td>' +
         '</tr>';
     }

@@ -1,8 +1,9 @@
 function showMessage(type, text) {
     const msg = document.getElementById('authMessage');
-    if (type === 'error') { msg.innerHTML = '<div class="error">' + text + '</div>'; }
-    else { msg.innerHTML = '<div class="success">' + text + '</div>'; }
-    setTimeout(function() { msg.innerHTML = ''; }, 5000);
+    if (!msg) return;
+    msg.textContent = String(text || '');
+    msg.className = type === 'error' ? 'error' : 'success';
+    setTimeout(function() { msg.textContent = ''; msg.className = ''; }, 5000);
 }
 
 function toggleForm() {
