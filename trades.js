@@ -320,17 +320,20 @@ async function consolidateTradesForUserBatch() {
             .limit(1);
         if (seqRes && seqRes.data && seqRes.data.length > 0 && seqRes.data[0].trades_seq != null) { nextSeq = parseInt(seqRes.data[0].trades_seq, 10) + 1; }
     } catch (e) {}
-    const toInsert = []; const keysForInsert = []; const tradeIdByKey = {};
+    const toInsert = []; const keysForInsert = []; const tradeIdByKey = {}; const seqAssignments = [];
     for (let i = 0; i < candidates.length; i++) {
         const key = kTrade(candidates[i]);
         const exId = existingMap[key];
+        let seqForCandidate = existingMap[key + '|seq'];
         if (exId) { tradeIdByKey[key] = exId; }
         else {
             const seq = nextSeq++;
             toInsert.push({ user_id: currentUser.id, instrument: candidates[i].instrument, account: candidates[i].account, type: candidates[i].type, start_time: candidates[i].start_time, end_time: candidates[i].end_time, status: candidates[i].status, avg_price_entry: candidates[i].avg_price_entry, avg_price_exit: candidates[i].avg_price_exit, total_qty_entry: candidates[i].total_qty_entry, total_qty_exit: candidates[i].total_qty_exit, pnl_points: candidates[i].pnl_points, pnl_dollars: candidates[i].pnl_dollars, total_commissions: candidates[i].total_commissions, trades_seq: seq });
             keysForInsert.push(key);
             existingMap[key + '|seq'] = seq;
+            seqForCandidate = seq;
         }
+        seqAssignments.push({ seq: seqForCandidate, opIds: candidates[i].opIds || [], instrument: candidates[i].instrument, account: candidates[i].account, start_time: candidates[i].start_time, end_time: candidates[i].end_time });
     }
     if (toInsert.length > 0) {
         console.log('[consolidateTradesForUserBatch] inserting trades', toInsert.length);
@@ -360,6 +363,60 @@ async function consolidateTradesForUserBatch() {
         updates.push({ tradeId: tId, tradeSeq: tSeq, opIds: ids, opSourceIds: candidates[i].opSourceIds || [], instrument: candidates[i].instrument, account: candidates[i].account, start_time: candidates[i].start_time, end_time: candidates[i].end_time });
     }
     console.log('[consolidateTradesForUserBatch] updates prepared', updates.length, updates.length ? { firstUpdate: { tradeId: updates[0].tradeId, ops: updates[0].opIds.length, instrument: updates[0].instrument, account: updates[0].account } } : {});
+
+    let opsSeqSetTotal = 0; let opsSeqSetByIds = 0; let opsSeqSetByRange = 0;
+    for (let i = 0; i < seqAssignments.length; i++) {
+        const s = seqAssignments[i];
+        if (s.seq == null) continue;
+        const chunkSize = 100;
+        let affectedLocal = 0;
+        for (let start = 0; start < s.opIds.length; start += chunkSize) {
+            const chunk = s.opIds.slice(start, start + chunkSize);
+            const r = await supabaseClient
+                .from('operations')
+                .update({ trade_seq: s.seq })
+                .in('id', chunk)
+                .eq('user_id', currentUser.id)
+                .select('id');
+            if (r && r.error) console.error('[consolidateTradesForUserBatch] set trade_seq by ids error', r.error.message);
+            const n = r && r.data ? r.data.length : 0;
+            affectedLocal += n; opsSeqSetTotal += n; opsSeqSetByIds += n;
+        }
+        if (affectedLocal === 0) {
+            const r2 = await supabaseClient
+                .from('operations')
+                .update({ trade_seq: s.seq })
+                .eq('user_id', currentUser.id)
+                .eq('instrument', s.instrument)
+                .eq('account', s.account)
+                .gte('time', s.start_time)
+                .lte('time', s.end_time)
+                .select('id');
+            if (r2 && r2.error) console.error('[consolidateTradesForUserBatch] set trade_seq by range error', r2.error.message);
+            const n2 = r2 && r2.data ? r2.data.length : 0;
+            opsSeqSetTotal += n2; opsSeqSetByRange += n2;
+        }
+    }
+    console.log('[consolidateTradesForUserBatch] trade_seq set', { total: opsSeqSetTotal, byIds: opsSeqSetByIds, byRange: opsSeqSetByRange });
+
+    const uniqueSeqs = {};
+    for (let i = 0; i < seqAssignments.length; i++) { if (seqAssignments[i].seq != null) uniqueSeqs[seqAssignments[i].seq] = true; }
+    const seqList = Object.keys(uniqueSeqs).map(function(x){ return parseInt(x,10); });
+    let opsLinkedBySeq = 0;
+    for (let i = 0; i < seqList.length; i++) {
+        const seq = seqList[i];
+        const tId = tradeIdBySeq[seq];
+        if (!tId) continue;
+        const r = await supabaseClient
+            .from('operations')
+            .update({ trade_id: tId })
+            .eq('user_id', currentUser.id)
+            .eq('trade_seq', seq)
+            .select('id');
+        if (r && r.error) console.error('[consolidateTradesForUserBatch] link by trade_seq error', r.error.message);
+        opsLinkedBySeq += r && r.data ? r.data.length : 0;
+    }
+    console.log('[consolidateTradesForUserBatch] link by trade_seq', { affected: opsLinkedBySeq });
     const linkLogs = [];
     let opsUpdatedTotal = 0; let opsUpdatedByIds = 0; let opsUpdatedBySource = 0; let opsUpdatedByRange = 0;
     for (let i = 0; i < updates.length; i++) {
