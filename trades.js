@@ -291,6 +291,7 @@ async function consolidateTradesForUserBatch() {
     console.log('[consolidateTradesForUserBatch] search range', { instrumentsCount: instruments.length, accountsCount: accounts.length, minIso, maxIso });
     function kTrade(x) { return (x.instrument || '') + '|' + (x.account || '') + '|' + (x.type || '') + '|' + (x.start_time || '') + '|' + (x.end_time || ''); }
     const existingMap = {};
+    const tradeIdBySeq = {};
     if (instruments.length > 0) {
         const sel = await supabaseClient
             .from('trades')
@@ -301,7 +302,13 @@ async function consolidateTradesForUserBatch() {
             .gte('start_time', minIso)
             .lte('end_time', maxIso);
         const existing = sel.data || [];
-        for (let i = 0; i < existing.length; i++) { const x = existing[i]; const k = (x.instrument || '') + '|' + (x.account || '') + '|' + (x.type || '') + '|' + (x.start_time || '') + '|' + (x.end_time || ''); existingMap[k] = x.id; existingMap[k + '|seq'] = x.trades_seq; }
+        for (let i = 0; i < existing.length; i++) {
+            const x = existing[i];
+            const k = (x.instrument || '') + '|' + (x.account || '') + '|' + (x.type || '') + '|' + (x.start_time || '') + '|' + (x.end_time || '');
+            existingMap[k] = x.id;
+            existingMap[k + '|seq'] = x.trades_seq;
+            if (x.trades_seq != null) tradeIdBySeq[x.trades_seq] = x.id;
+        }
     }
     let nextSeq = 1;
     try {
@@ -339,18 +346,20 @@ async function consolidateTradesForUserBatch() {
             const k = (r.instrument || '') + '|' + (r.account || '') + '|' + (r.type || '') + '|' + (r.start_time || '') + '|' + (r.end_time || '');
             tradeIdByKey[k] = r.id;
             existingMap[k + '|seq'] = r.trades_seq;
+            if (r.trades_seq != null) tradeIdBySeq[r.trades_seq] = r.id;
         }
     }
     const updates = [];
     for (let i = 0; i < candidates.length; i++) {
         const key = kTrade(candidates[i]);
-        const tId = tradeIdByKey[key];
         const tSeq = existingMap[key + '|seq'];
+        const tId = tradeIdByKey[key] || (tSeq != null ? tradeIdBySeq[tSeq] : null);
         if (!tId) continue;
         const ids = candidates[i].opIds || [];
         if (ids.length === 0) continue;
         updates.push({ tradeId: tId, tradeSeq: tSeq, opIds: ids, opSourceIds: candidates[i].opSourceIds || [], instrument: candidates[i].instrument, account: candidates[i].account, start_time: candidates[i].start_time, end_time: candidates[i].end_time });
     }
+    console.log('[consolidateTradesForUserBatch] updates prepared', updates.length, updates.length ? { firstUpdate: { tradeId: updates[0].tradeId, ops: updates[0].opIds.length, instrument: updates[0].instrument, account: updates[0].account } } : {});
     const linkLogs = [];
     let opsUpdatedTotal = 0; let opsUpdatedByIds = 0; let opsUpdatedBySource = 0; let opsUpdatedByRange = 0;
     for (let i = 0; i < updates.length; i++) {
