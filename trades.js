@@ -383,101 +383,21 @@ async function consolidateTradesForUserBatch() {
     }
     console.log('[consolidateTradesForUserBatch] trade_seq set total', opsSeqSetTotal);
 
-    const linkRows = [];
-    for (let i = 0; i < updates.length; i++) {
-        const u = updates[i];
-        for (let k = 0; k < (u.opIds || []).length; k++) { linkRows.push({ id: u.opIds[k], user_id: currentUser.id, trade_id: u.tradeId }); }
+    const uniqueSeqs = {};
+    for (let i = 0; i < seqAssignments.length; i++) { if (seqAssignments[i].seq != null) uniqueSeqs[seqAssignments[i].seq] = true; }
+    const seqList = Object.keys(uniqueSeqs).map(function(x){ return parseInt(x,10); });
+    const rpcChunk = 500;
+    let opsLinkedByRpcTotal = 0;
+    for (let start = 0; start < seqList.length; start += rpcChunk) {
+        const sChunk = seqList.slice(start, start + rpcChunk);
+        const r = await supabaseClient.rpc('link_ops_to_trades_by_seq', { p_user_id: currentUser.id, p_trades_seq: sChunk });
+        if (r && r.error) { console.error('[consolidateTradesForUserBatch] rpc link_ops_to_trades_by_seq error', r.error.message); continue; }
+        const affected = r && typeof r.data !== 'undefined' ? parseInt(r.data, 10) : 0;
+        opsLinkedByRpcTotal += (isNaN(affected) ? 0 : affected);
+        console.log('[consolidateTradesForUserBatch] rpc link chunk', { seqs: sChunk.length, affected });
     }
-    const linkChunk = 500;
-    let opsLinkedBySeq = 0;
-    for (let start = 0; start < linkRows.length; start += linkChunk) {
-        const part = linkRows.slice(start, start + linkChunk);
-        const up = await supabaseClient
-            .from('operations')
-            .upsert(part, { onConflict: 'id', returning: 'minimal' });
-        if (up && up.error) console.error('[consolidateTradesForUserBatch] upsert trade_id chunk error', up.error.message);
-        opsLinkedBySeq += part.length;
-        console.log('[consolidateTradesForUserBatch] link trade_id chunk', { rows: part.length });
-    }
-    console.log('[consolidateTradesForUserBatch] link trade_id total', opsLinkedBySeq);
     const linkLogs = [];
-    let opsUpdatedTotal = 0; let opsUpdatedByIds = 0; let opsUpdatedBySource = 0; let opsUpdatedByRange = 0;
-    for (let i = 0; i < updates.length; i++) {
-        const u = updates[i];
-        const chunkSize = 100;
-        let updatedCount = 0;
-        for (let start = 0; start < u.opIds.length; start += chunkSize) {
-            const chunk = u.opIds.slice(start, start + chunkSize);
-            const res = await supabaseClient
-                .from('operations')
-                .update({ trade_id: u.tradeId })
-                .in('id', chunk)
-                .eq('user_id', currentUser.id)
-                .select('id');
-            linkLogs.push({ type: 'update_by_ids', tradeId: u.tradeId, chunkCount: chunk.length, affected: res && res.data ? res.data.length : 0, error: res && res.error ? res.error.message : null });
-            if (res && res.error) console.error('[consolidateTradesForUserBatch] update_by_ids error', res.error.message);
-            console.log('[consolidateTradesForUserBatch] update_by_ids', { chunk: chunk.length, affected: res && res.data ? res.data.length : 0 });
-            if (res && !res.error) { const n = (res.data ? res.data.length : 0); updatedCount += n; opsUpdatedTotal += n; opsUpdatedByIds += n; }
-        }
-        if (updatedCount === 0 && (u.opSourceIds || []).length > 0) {
-            for (let start = 0; start < u.opSourceIds.length; start += chunkSize) {
-                const sChunk = u.opSourceIds.slice(start, start + chunkSize);
-                const res2 = await supabaseClient
-                    .from('operations')
-                    .update({ trade_id: u.tradeId })
-                    .in('source_id', sChunk)
-                    .eq('user_id', currentUser.id)
-                    .select('id');
-                linkLogs.push({ type: 'update_by_source_id', tradeId: u.tradeId, chunkCount: sChunk.length, affected: res2 && res2.data ? res2.data.length : 0, error: res2 && res2.error ? res2.error.message : null });
-                if (res2 && res2.error) console.error('[consolidateTradesForUserBatch] update_by_source_id error', res2.error.message);
-                console.log('[consolidateTradesForUserBatch] update_by_source_id', { chunk: sChunk.length, affected: res2 && res2.data ? res2.data.length : 0 });
-                if (res2 && !res2.error) { const n2 = (res2.data ? res2.data.length : 0); updatedCount += n2; opsUpdatedTotal += n2; opsUpdatedBySource += n2; }
-            }
-        }
-        if (updatedCount === 0) {
-            const res3 = await supabaseClient
-                .from('operations')
-                .update({ trade_id: u.tradeId })
-                .eq('user_id', currentUser.id)
-                .eq('instrument', u.instrument)
-                .eq('account', u.account)
-                .gte('time', u.start_time)
-                .lte('time', u.end_time)
-                .select('id');
-            linkLogs.push({ type: 'update_by_range', tradeId: u.tradeId, instrument: u.instrument, account: u.account, start: u.start_time, end: u.end_time, affected: res3 && res3.data ? res3.data.length : 0, error: res3 && res3.error ? res3.error.message : null });
-            if (res3 && res3.error) console.error('[consolidateTradesForUserBatch] update_by_range error', res3.error.message);
-            console.log('[consolidateTradesForUserBatch] update_by_range', { affected: res3 && res3.data ? res3.data.length : 0 });
-            if (res3 && !res3.error) { const n3 = (res3.data ? res3.data.length : 0); opsUpdatedTotal += n3; opsUpdatedByRange += n3; }
-        }
-        if (updatedCount === 0) {
-            for (let k = 0; k < (u.opIds || []).length; k++) {
-                const singleId = u.opIds[k];
-                const r1 = await supabaseClient
-                    .from('operations')
-                    .update({ trade_id: u.tradeId })
-                    .eq('user_id', currentUser.id)
-                    .eq('id', singleId)
-                    .select('id');
-                linkLogs.push({ type: 'update_single_id', tradeId: u.tradeId, id: singleId, affected: r1 && r1.data ? r1.data.length : 0, error: r1 && r1.error ? r1.error.message : null });
-                if (r1 && r1.error) console.error('[consolidateTradesForUserBatch] update_single_id error', r1.error.message);
-                console.log('[consolidateTradesForUserBatch] update_single_id', { affected: r1 && r1.data ? r1.data.length : 0 });
-                if (r1 && !r1.error && r1.data && r1.data.length > 0) { updatedCount += 1; opsUpdatedTotal += 1; opsUpdatedByIds += 1; continue; }
-                const singleSrc = (u.opSourceIds || [])[k];
-                if (singleSrc) {
-                    const r2 = await supabaseClient
-                        .from('operations')
-                        .update({ trade_id: u.tradeId })
-                        .eq('user_id', currentUser.id)
-                        .eq('source_id', singleSrc)
-                        .select('id');
-                    linkLogs.push({ type: 'update_single_source', tradeId: u.tradeId, source_id: singleSrc, affected: r2 && r2.data ? r2.data.length : 0, error: r2 && r2.error ? r2.error.message : null });
-                    if (r2 && r2.error) console.error('[consolidateTradesForUserBatch] update_single_source error', r2.error.message);
-                    console.log('[consolidateTradesForUserBatch] update_single_source', { affected: r2 && r2.data ? r2.data.length : 0 });
-                    if (r2 && !r2.error && r2.data && r2.data.length > 0) { updatedCount += 1; opsUpdatedTotal += 1; opsUpdatedBySource += 1; }
-                }
-            }
-        }
-    }
+    let opsUpdatedTotal = opsLinkedByRpcTotal; let opsUpdatedByIds = 0; let opsUpdatedBySource = 0; let opsUpdatedByRange = 0;
     const insertedCount = Object.keys(tradeIdByKey).length;
     let linkedOps = 0; for (let i = 0; i < updates.length; i++) { linkedOps += (updates[i].opIds || []).length; }
     console.log('[consolidateTradesForUserBatch] summary', { tradesInserted: insertedCount, tradesDuplicates: (candidates.length - insertedCount), opsUpdatedTotal, opsRequested: linkedOps, byIds: opsUpdatedByIds, bySource: opsUpdatedBySource, byRange: opsUpdatedByRange });
