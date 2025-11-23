@@ -360,80 +360,50 @@ async function consolidateTradesForUserBatch() {
         if (!tId) continue;
         const ids = candidates[i].opIds || [];
         if (ids.length === 0) continue;
-        updates.push({ tradeId: tId, tradeSeq: tSeq, opIds: ids, opSourceIds: candidates[i].opSourceIds || [], instrument: candidates[i].instrument, account: candidates[i].account, start_time: candidates[i].start_time, end_time: candidates[i].end_time });
+        updates.push({ tradeId: tId, tradeSeq: tSeq, opIds: ids });
     }
-    console.log('[consolidateTradesForUserBatch] updates prepared', updates.length, updates.length ? { firstUpdate: { tradeId: updates[0].tradeId, ops: updates[0].opIds.length, instrument: updates[0].instrument, account: updates[0].account } } : {});
+    console.log('[consolidateTradesForUserBatch] updates prepared', updates.length);
 
-    let opsSeqSetTotal = 0; let opsSeqSetByIds = 0; let opsSeqSetByRange = 0;
+    const assignRows = [];
     for (let i = 0; i < seqAssignments.length; i++) {
         const s = seqAssignments[i];
         if (s.seq == null) continue;
-        const chunkSize = 100;
-        let affectedLocal = 0;
-        for (let start = 0; start < s.opIds.length; start += chunkSize) {
-            const chunk = s.opIds.slice(start, start + chunkSize);
-            const r = await supabaseClient
-                .from('operations')
-                .update({ trade_seq: s.seq })
-                .in('id', chunk)
-                .eq('user_id', currentUser.id)
-                .select('id');
-            if (r && r.error) console.error('[consolidateTradesForUserBatch] set trade_seq by ids error', r.error.message);
-            const n = r && r.data ? r.data.length : 0;
-            affectedLocal += n; opsSeqSetTotal += n; opsSeqSetByIds += n;
-        }
-        if (affectedLocal === 0) {
-            const r2 = await supabaseClient
-                .from('operations')
-                .update({ trade_seq: s.seq })
-                .eq('user_id', currentUser.id)
-                .eq('instrument', s.instrument)
-                .eq('account', s.account)
-                .gte('time', s.start_time)
-                .lte('time', s.end_time)
-                .select('id');
-            if (r2 && r2.error) console.error('[consolidateTradesForUserBatch] set trade_seq by range error', r2.error.message);
-            const n2 = r2 && r2.data ? r2.data.length : 0;
-            opsSeqSetTotal += n2; opsSeqSetByRange += n2;
-        }
+        for (let k = 0; k < (s.opIds || []).length; k++) { assignRows.push({ id: s.opIds[k], user_id: currentUser.id, trade_seq: s.seq }); }
     }
-    console.log('[consolidateTradesForUserBatch] trade_seq set', { total: opsSeqSetTotal, byIds: opsSeqSetByIds, byRange: opsSeqSetByRange });
-
-    const uniqueSeqs = {};
-    for (let i = 0; i < seqAssignments.length; i++) { if (seqAssignments[i].seq != null) uniqueSeqs[seqAssignments[i].seq] = true; }
-    const seqList = Object.keys(uniqueSeqs).map(function(x){ return parseInt(x,10); });
-    let opsLinkedBySeq = 0;
-    const seqChunkSize = 100;
-    for (let start = 0; start < seqList.length; start += seqChunkSize) {
-        const sChunk = seqList.slice(start, start + seqChunkSize);
-        const selOps = await supabaseClient
+    const assignChunk = 500;
+    let opsSeqSetTotal = 0;
+    for (let start = 0; start < assignRows.length; start += assignChunk) {
+        const part = assignRows.slice(start, start + assignChunk);
+        const r = await supabaseClient
             .from('operations')
-            .select('id,trade_seq')
-            .eq('user_id', currentUser.id)
-            .in('trade_seq', sChunk);
-        const ops = selOps.data || [];
-        if (selOps && selOps.error) console.error('[consolidateTradesForUserBatch] fetch ops by seq chunk error', selOps.error.message);
-        const toUpsert = [];
-        for (let i = 0; i < ops.length; i++) {
-            const op = ops[i];
-            const tId = tradeIdBySeq[op.trade_seq];
-            if (!tId) continue;
-            toUpsert.push({ id: op.id, user_id: currentUser.id, trade_id: tId });
-        }
-        if (toUpsert.length > 0) {
-            const up = await supabaseClient
-                .from('operations')
-                .upsert(toUpsert, { onConflict: 'id' })
-                .select('id');
-            if (up && up.error) console.error('[consolidateTradesForUserBatch] upsert trade_id by seq chunk error', up.error.message);
-            const n = up && up.data ? up.data.length : 0;
-            opsLinkedBySeq += n;
-            console.log('[consolidateTradesForUserBatch] link by trade_seq chunk', { chunkSeqs: sChunk.length, rows: ops.length, affected: n });
-        } else {
-            console.log('[consolidateTradesForUserBatch] link by trade_seq chunk', { chunkSeqs: sChunk.length, rows: ops.length, affected: 0 });
-        }
+            .upsert(part, { onConflict: 'id' })
+            .select('id');
+        if (r && r.error) console.error('[consolidateTradesForUserBatch] upsert trade_seq chunk error', r.error.message);
+        const n = r && r.data ? r.data.length : 0;
+        opsSeqSetTotal += n;
+        console.log('[consolidateTradesForUserBatch] trade_seq upsert chunk', { rows: part.length, affected: n });
     }
-    console.log('[consolidateTradesForUserBatch] link by trade_seq', { affected: opsLinkedBySeq });
+    console.log('[consolidateTradesForUserBatch] trade_seq set total', opsSeqSetTotal);
+
+    const linkRows = [];
+    for (let i = 0; i < updates.length; i++) {
+        const u = updates[i];
+        for (let k = 0; k < (u.opIds || []).length; k++) { linkRows.push({ id: u.opIds[k], user_id: currentUser.id, trade_id: u.tradeId }); }
+    }
+    const linkChunk = 500;
+    let opsLinkedBySeq = 0;
+    for (let start = 0; start < linkRows.length; start += linkChunk) {
+        const part = linkRows.slice(start, start + linkChunk);
+        const up = await supabaseClient
+            .from('operations')
+            .upsert(part, { onConflict: 'id' })
+            .select('id');
+        if (up && up.error) console.error('[consolidateTradesForUserBatch] upsert trade_id chunk error', up.error.message);
+        const n = up && up.data ? up.data.length : 0;
+        opsLinkedBySeq += n;
+        console.log('[consolidateTradesForUserBatch] link trade_id chunk', { rows: part.length, affected: n });
+    }
+    console.log('[consolidateTradesForUserBatch] link trade_id total', opsLinkedBySeq);
     const linkLogs = [];
     let opsUpdatedTotal = 0; let opsUpdatedByIds = 0; let opsUpdatedBySource = 0; let opsUpdatedByRange = 0;
     for (let i = 0; i < updates.length; i++) {
