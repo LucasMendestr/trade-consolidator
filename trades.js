@@ -403,18 +403,35 @@ async function consolidateTradesForUserBatch() {
     for (let i = 0; i < seqAssignments.length; i++) { if (seqAssignments[i].seq != null) uniqueSeqs[seqAssignments[i].seq] = true; }
     const seqList = Object.keys(uniqueSeqs).map(function(x){ return parseInt(x,10); });
     let opsLinkedBySeq = 0;
-    for (let i = 0; i < seqList.length; i++) {
-        const seq = seqList[i];
-        const tId = tradeIdBySeq[seq];
-        if (!tId) continue;
-        const r = await supabaseClient
+    const seqChunkSize = 100;
+    for (let start = 0; start < seqList.length; start += seqChunkSize) {
+        const sChunk = seqList.slice(start, start + seqChunkSize);
+        const selOps = await supabaseClient
             .from('operations')
-            .update({ trade_id: tId })
+            .select('id,trade_seq')
             .eq('user_id', currentUser.id)
-            .eq('trade_seq', seq)
-            .select('id');
-        if (r && r.error) console.error('[consolidateTradesForUserBatch] link by trade_seq error', r.error.message);
-        opsLinkedBySeq += r && r.data ? r.data.length : 0;
+            .in('trade_seq', sChunk);
+        const ops = selOps.data || [];
+        if (selOps && selOps.error) console.error('[consolidateTradesForUserBatch] fetch ops by seq chunk error', selOps.error.message);
+        const toUpsert = [];
+        for (let i = 0; i < ops.length; i++) {
+            const op = ops[i];
+            const tId = tradeIdBySeq[op.trade_seq];
+            if (!tId) continue;
+            toUpsert.push({ id: op.id, user_id: currentUser.id, trade_id: tId });
+        }
+        if (toUpsert.length > 0) {
+            const up = await supabaseClient
+                .from('operations')
+                .upsert(toUpsert, { onConflict: 'id' })
+                .select('id');
+            if (up && up.error) console.error('[consolidateTradesForUserBatch] upsert trade_id by seq chunk error', up.error.message);
+            const n = up && up.data ? up.data.length : 0;
+            opsLinkedBySeq += n;
+            console.log('[consolidateTradesForUserBatch] link by trade_seq chunk', { chunkSeqs: sChunk.length, rows: ops.length, affected: n });
+        } else {
+            console.log('[consolidateTradesForUserBatch] link by trade_seq chunk', { chunkSeqs: sChunk.length, rows: ops.length, affected: 0 });
+        }
     }
     console.log('[consolidateTradesForUserBatch] link by trade_seq', { affected: opsLinkedBySeq });
     const linkLogs = [];
