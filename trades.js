@@ -200,14 +200,16 @@ async function consolidateTradesForUser() {
     }
 }
 async function consolidateTradesForUserBatch() {
-    if (!supabaseClient || !currentUser) return;
+    console.log('[consolidateTradesForUserBatch] start', { user_id: currentUser && currentUser.id });
+    if (!supabaseClient || !currentUser) { console.warn('[consolidateTradesForUserBatch] missing supabaseClient or currentUser'); return; }
     const opsRes = await supabaseClient
         .from('operations')
-        .select('id,user_id,instrument,account,action,e_x,quantity,price,commission,time,position')
+        .select('id,user_id,instrument,account,action,e_x,quantity,price,commission,time,position,source_id')
         .eq('user_id', currentUser.id)
         .order('time');
     const operations = opsRes.data || [];
-    if (!operations || operations.length === 0) return;
+    console.log('[consolidateTradesForUserBatch] operations count', operations.length, opsRes.error ? { error: opsRes.error.message } : {});
+    if (!operations || operations.length === 0) { console.warn('[consolidateTradesForUserBatch] no operations to consolidate'); return; }
     function parseTimeToMillis(s) {
         if (!s) return NaN;
         const raw = String(s).trim();
@@ -231,6 +233,7 @@ async function consolidateTradesForUserBatch() {
         if (!grouped[key]) grouped[key] = [];
         grouped[key].push(op);
     }
+    console.log('[consolidateTradesForUserBatch] groups', Object.keys(grouped).length);
     const candidates = [];
     for (const key in grouped) {
         const ops = grouped[key];
@@ -270,7 +273,8 @@ async function consolidateTradesForUserBatch() {
             }
         }
     }
-    if (candidates.length === 0) return;
+    console.log('[consolidateTradesForUserBatch] candidates', candidates.length);
+    if (candidates.length === 0) { console.warn('[consolidateTradesForUserBatch] no trade candidates'); return; }
     const instrumentsSet = {}; const accountsSet = {}; let minTime = null; let maxTime = null;
     for (let i = 0; i < candidates.length; i++) {
         const c = candidates[i];
@@ -284,6 +288,7 @@ async function consolidateTradesForUserBatch() {
     const accounts = Object.keys(accountsSet);
     const minIso = new Date(minTime).toISOString();
     const maxIso = new Date(maxTime).toISOString();
+    console.log('[consolidateTradesForUserBatch] search range', { instrumentsCount: instruments.length, accountsCount: accounts.length, minIso, maxIso });
     function kTrade(x) { return (x.instrument || '') + '|' + (x.account || '') + '|' + (x.type || '') + '|' + (x.start_time || '') + '|' + (x.end_time || ''); }
     const existingMap = {};
     if (instruments.length > 0) {
@@ -321,11 +326,14 @@ async function consolidateTradesForUserBatch() {
         }
     }
     if (toInsert.length > 0) {
+        console.log('[consolidateTradesForUserBatch] inserting trades', toInsert.length);
         const ins = await supabaseClient
             .from('trades')
             .insert(toInsert)
             .select('id,instrument,account,type,start_time,end_time,trades_seq');
         const rows = ins.data || [];
+        if (ins.error) console.error('[consolidateTradesForUserBatch] insert trades error', ins.error.message);
+        console.log('[consolidateTradesForUserBatch] inserted trades', rows.length);
         for (let i = 0; i < rows.length; i++) {
             const r = rows[i];
             const k = (r.instrument || '') + '|' + (r.account || '') + '|' + (r.type || '') + '|' + (r.start_time || '') + '|' + (r.end_time || '');
@@ -353,11 +361,13 @@ async function consolidateTradesForUserBatch() {
             const chunk = u.opIds.slice(start, start + chunkSize);
             const res = await supabaseClient
                 .from('operations')
-                .update({ trade_id: u.tradeId, trade_seq: u.tradeSeq })
+                .update({ trade_id: u.tradeId })
                 .in('id', chunk)
                 .eq('user_id', currentUser.id)
                 .select('id');
             linkLogs.push({ type: 'update_by_ids', tradeId: u.tradeId, chunkCount: chunk.length, affected: res && res.data ? res.data.length : 0, error: res && res.error ? res.error.message : null });
+            if (res && res.error) console.error('[consolidateTradesForUserBatch] update_by_ids error', res.error.message);
+            console.log('[consolidateTradesForUserBatch] update_by_ids', { chunk: chunk.length, affected: res && res.data ? res.data.length : 0 });
             if (res && !res.error) { const n = (res.data ? res.data.length : 0); updatedCount += n; opsUpdatedTotal += n; opsUpdatedByIds += n; }
         }
         if (updatedCount === 0 && (u.opSourceIds || []).length > 0) {
@@ -365,18 +375,20 @@ async function consolidateTradesForUserBatch() {
                 const sChunk = u.opSourceIds.slice(start, start + chunkSize);
                 const res2 = await supabaseClient
                     .from('operations')
-                    .update({ trade_id: u.tradeId, trade_seq: u.tradeSeq })
+                    .update({ trade_id: u.tradeId })
                     .in('source_id', sChunk)
                     .eq('user_id', currentUser.id)
                     .select('id');
                 linkLogs.push({ type: 'update_by_source_id', tradeId: u.tradeId, chunkCount: sChunk.length, affected: res2 && res2.data ? res2.data.length : 0, error: res2 && res2.error ? res2.error.message : null });
+                if (res2 && res2.error) console.error('[consolidateTradesForUserBatch] update_by_source_id error', res2.error.message);
+                console.log('[consolidateTradesForUserBatch] update_by_source_id', { chunk: sChunk.length, affected: res2 && res2.data ? res2.data.length : 0 });
                 if (res2 && !res2.error) { const n2 = (res2.data ? res2.data.length : 0); updatedCount += n2; opsUpdatedTotal += n2; opsUpdatedBySource += n2; }
             }
         }
         if (updatedCount === 0) {
             const res3 = await supabaseClient
                 .from('operations')
-                .update({ trade_id: u.tradeId, trade_seq: u.tradeSeq })
+                .update({ trade_id: u.tradeId })
                 .eq('user_id', currentUser.id)
                 .eq('instrument', u.instrument)
                 .eq('account', u.account)
@@ -384,6 +396,8 @@ async function consolidateTradesForUserBatch() {
                 .lte('time', u.end_time)
                 .select('id');
             linkLogs.push({ type: 'update_by_range', tradeId: u.tradeId, instrument: u.instrument, account: u.account, start: u.start_time, end: u.end_time, affected: res3 && res3.data ? res3.data.length : 0, error: res3 && res3.error ? res3.error.message : null });
+            if (res3 && res3.error) console.error('[consolidateTradesForUserBatch] update_by_range error', res3.error.message);
+            console.log('[consolidateTradesForUserBatch] update_by_range', { affected: res3 && res3.data ? res3.data.length : 0 });
             if (res3 && !res3.error) { const n3 = (res3.data ? res3.data.length : 0); opsUpdatedTotal += n3; opsUpdatedByRange += n3; }
         }
         if (updatedCount === 0) {
@@ -391,21 +405,25 @@ async function consolidateTradesForUserBatch() {
                 const singleId = u.opIds[k];
                 const r1 = await supabaseClient
                     .from('operations')
-                    .update({ trade_id: u.tradeId, trade_seq: u.tradeSeq })
+                    .update({ trade_id: u.tradeId })
                     .eq('user_id', currentUser.id)
                     .eq('id', singleId)
                     .select('id');
                 linkLogs.push({ type: 'update_single_id', tradeId: u.tradeId, id: singleId, affected: r1 && r1.data ? r1.data.length : 0, error: r1 && r1.error ? r1.error.message : null });
+                if (r1 && r1.error) console.error('[consolidateTradesForUserBatch] update_single_id error', r1.error.message);
+                console.log('[consolidateTradesForUserBatch] update_single_id', { affected: r1 && r1.data ? r1.data.length : 0 });
                 if (r1 && !r1.error && r1.data && r1.data.length > 0) { updatedCount += 1; opsUpdatedTotal += 1; opsUpdatedByIds += 1; continue; }
                 const singleSrc = (u.opSourceIds || [])[k];
                 if (singleSrc) {
                     const r2 = await supabaseClient
                         .from('operations')
-                        .update({ trade_id: u.tradeId, trade_seq: u.tradeSeq })
+                        .update({ trade_id: u.tradeId })
                         .eq('user_id', currentUser.id)
                         .eq('source_id', singleSrc)
                         .select('id');
                     linkLogs.push({ type: 'update_single_source', tradeId: u.tradeId, source_id: singleSrc, affected: r2 && r2.data ? r2.data.length : 0, error: r2 && r2.error ? r2.error.message : null });
+                    if (r2 && r2.error) console.error('[consolidateTradesForUserBatch] update_single_source error', r2.error.message);
+                    console.log('[consolidateTradesForUserBatch] update_single_source', { affected: r2 && r2.data ? r2.data.length : 0 });
                     if (r2 && !r2.error && r2.data && r2.data.length > 0) { updatedCount += 1; opsUpdatedTotal += 1; opsUpdatedBySource += 1; }
                 }
             }
@@ -413,6 +431,7 @@ async function consolidateTradesForUserBatch() {
     }
     const insertedCount = Object.keys(tradeIdByKey).length;
     let linkedOps = 0; for (let i = 0; i < updates.length; i++) { linkedOps += (updates[i].opIds || []).length; }
+    console.log('[consolidateTradesForUserBatch] summary', { tradesInserted: insertedCount, tradesDuplicates: (candidates.length - insertedCount), opsUpdatedTotal, opsRequested: linkedOps, byIds: opsUpdatedByIds, bySource: opsUpdatedBySource, byRange: opsUpdatedByRange });
     const summaryHtml = '<div class="success">✅ Trades consolidados: ' + insertedCount + ' inseridos, ' + (candidates.length - insertedCount) + ' duplicatas</div>' +
         '<div class="success">🔗 Operações atualizadas: ' + opsUpdatedTotal + ' de ' + linkedOps + ' (IDs: ' + opsUpdatedByIds + ', source_id: ' + opsUpdatedBySource + ', intervalo: ' + opsUpdatedByRange + ')</div>' +
         '<div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">' +
