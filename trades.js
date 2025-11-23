@@ -376,12 +376,10 @@ async function consolidateTradesForUserBatch() {
         const part = assignRows.slice(start, start + assignChunk);
         const r = await supabaseClient
             .from('operations')
-            .upsert(part, { onConflict: 'id' })
-            .select('id');
+            .upsert(part, { onConflict: 'id', returning: 'minimal' });
         if (r && r.error) console.error('[consolidateTradesForUserBatch] upsert trade_seq chunk error', r.error.message);
-        const n = r && r.data ? r.data.length : 0;
-        opsSeqSetTotal += n;
-        console.log('[consolidateTradesForUserBatch] trade_seq upsert chunk', { rows: part.length, affected: n });
+        opsSeqSetTotal += part.length;
+        console.log('[consolidateTradesForUserBatch] trade_seq upsert chunk', { rows: part.length });
     }
     console.log('[consolidateTradesForUserBatch] trade_seq set total', opsSeqSetTotal);
 
@@ -396,12 +394,10 @@ async function consolidateTradesForUserBatch() {
         const part = linkRows.slice(start, start + linkChunk);
         const up = await supabaseClient
             .from('operations')
-            .upsert(part, { onConflict: 'id' })
-            .select('id');
+            .upsert(part, { onConflict: 'id', returning: 'minimal' });
         if (up && up.error) console.error('[consolidateTradesForUserBatch] upsert trade_id chunk error', up.error.message);
-        const n = up && up.data ? up.data.length : 0;
-        opsLinkedBySeq += n;
-        console.log('[consolidateTradesForUserBatch] link trade_id chunk', { rows: part.length, affected: n });
+        opsLinkedBySeq += part.length;
+        console.log('[consolidateTradesForUserBatch] link trade_id chunk', { rows: part.length });
     }
     console.log('[consolidateTradesForUserBatch] link trade_id total', opsLinkedBySeq);
     const linkLogs = [];

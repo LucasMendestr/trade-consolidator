@@ -194,10 +194,9 @@ async function dedupAndInsertBatch(batch) {
             if (toInsert.length === 0) { return { inserted: 0, duplicates: duplicates, errors: 0, errorDetails: [] }; }
             const res = await supabaseClient
                 .from('operations')
-                .upsert(toInsert, { onConflict: 'user_id,source_id', ignoreDuplicates: true })
-                .select('id');
+                .upsert(toInsert, { onConflict: 'user_id,source_id', ignoreDuplicates: true, returning: 'minimal' });
             if (res.error) { return { inserted: 0, duplicates: duplicates, errors: toInsert.length, errorDetails: [{ line: null, type: 'insert', message: res.error.message }] }; }
-            return { inserted: res.data ? res.data.length : toInsert.length, duplicates: duplicates, errors: 0, errorDetails: [] };
+            return { inserted: toInsert.length, duplicates: duplicates, errors: 0, errorDetails: [] };
         }
         const accountsSet = {}; for (let i = 0; i < batch.length; i++) { const acc = batch[i].account || ''; if (acc) accountsSet[acc] = true; }
         const accounts = Object.keys(accountsSet);
@@ -228,9 +227,9 @@ async function dedupAndInsertBatch(batch) {
             toInsert.push(batch[i]);
         }
         if (toInsert.length === 0) { return { inserted: 0, duplicates: duplicates, errors: 0, errorDetails: [] }; }
-        const res = await supabaseClient.from('operations').insert(toInsert).select('id');
+        const res = await supabaseClient.from('operations').insert(toInsert, { returning: 'minimal' });
         if (res.error) { return { inserted: 0, duplicates: duplicates, errors: toInsert.length, errorDetails: [{ line: null, type: 'insert', message: res.error.message }] }; }
-        return { inserted: res.data ? res.data.length : toInsert.length, duplicates: duplicates, errors: 0, errorDetails: [] };
+        return { inserted: toInsert.length, duplicates: duplicates, errors: 0, errorDetails: [] };
     } catch (err) {
         return { inserted: 0, duplicates: 0, errors: batch.length, errorDetails: [{ line: null, type: 'insert', message: err && err.message ? err.message : 'Falha ao inserir lote' }] };
     }
