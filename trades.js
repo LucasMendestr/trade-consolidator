@@ -341,13 +341,12 @@ async function consolidateTradesForUserBatch() {
         if (!tId) continue;
         const ids = candidates[i].opIds || [];
         if (ids.length === 0) continue;
-        updates.push({ tradeId: tId, tradeSeq: tSeq, opIds: ids });
+        updates.push({ tradeId: tId, tradeSeq: tSeq, opIds: ids, opSourceIds: candidates[i].opSourceIds || [], instrument: candidates[i].instrument, account: candidates[i].account, start_time: candidates[i].start_time, end_time: candidates[i].end_time });
     }
     const linkLogs = [];
     let opsUpdatedTotal = 0; let opsUpdatedByIds = 0; let opsUpdatedBySource = 0; let opsUpdatedByRange = 0;
     for (let i = 0; i < updates.length; i++) {
         const u = updates[i];
-        const cand = candidates[i] || {};
         const chunkSize = 100;
         let updatedCount = 0;
         for (let start = 0; start < u.opIds.length; start += chunkSize) {
@@ -361,9 +360,9 @@ async function consolidateTradesForUserBatch() {
             linkLogs.push({ type: 'update_by_ids', tradeId: u.tradeId, chunkCount: chunk.length, affected: res && res.data ? res.data.length : 0, error: res && res.error ? res.error.message : null });
             if (res && !res.error) { const n = (res.data ? res.data.length : 0); updatedCount += n; opsUpdatedTotal += n; opsUpdatedByIds += n; }
         }
-        if (updatedCount === 0 && (cand.opSourceIds || []).length > 0) {
-            for (let start = 0; start < cand.opSourceIds.length; start += chunkSize) {
-                const sChunk = cand.opSourceIds.slice(start, start + chunkSize);
+        if (updatedCount === 0 && (u.opSourceIds || []).length > 0) {
+            for (let start = 0; start < u.opSourceIds.length; start += chunkSize) {
+                const sChunk = u.opSourceIds.slice(start, start + chunkSize);
                 const res2 = await supabaseClient
                     .from('operations')
                     .update({ trade_id: u.tradeId, trade_seq: u.tradeSeq })
@@ -379,17 +378,17 @@ async function consolidateTradesForUserBatch() {
                 .from('operations')
                 .update({ trade_id: u.tradeId, trade_seq: u.tradeSeq })
                 .eq('user_id', currentUser.id)
-                .eq('instrument', cand.instrument)
-                .eq('account', cand.account)
-                .gte('time', cand.start_time)
-                .lte('time', cand.end_time)
+                .eq('instrument', u.instrument)
+                .eq('account', u.account)
+                .gte('time', u.start_time)
+                .lte('time', u.end_time)
                 .select('id');
-            linkLogs.push({ type: 'update_by_range', tradeId: u.tradeId, instrument: cand.instrument, account: cand.account, start: cand.start_time, end: cand.end_time, affected: res3 && res3.data ? res3.data.length : 0, error: res3 && res3.error ? res3.error.message : null });
+            linkLogs.push({ type: 'update_by_range', tradeId: u.tradeId, instrument: u.instrument, account: u.account, start: u.start_time, end: u.end_time, affected: res3 && res3.data ? res3.data.length : 0, error: res3 && res3.error ? res3.error.message : null });
             if (res3 && !res3.error) { const n3 = (res3.data ? res3.data.length : 0); opsUpdatedTotal += n3; opsUpdatedByRange += n3; }
         }
         if (updatedCount === 0) {
-            for (let k = 0; k < (cand.opIds || []).length; k++) {
-                const singleId = cand.opIds[k];
+            for (let k = 0; k < (u.opIds || []).length; k++) {
+                const singleId = u.opIds[k];
                 const r1 = await supabaseClient
                     .from('operations')
                     .update({ trade_id: u.tradeId, trade_seq: u.tradeSeq })
@@ -398,7 +397,7 @@ async function consolidateTradesForUserBatch() {
                     .select('id');
                 linkLogs.push({ type: 'update_single_id', tradeId: u.tradeId, id: singleId, affected: r1 && r1.data ? r1.data.length : 0, error: r1 && r1.error ? r1.error.message : null });
                 if (r1 && !r1.error && r1.data && r1.data.length > 0) { updatedCount += 1; opsUpdatedTotal += 1; opsUpdatedByIds += 1; continue; }
-                const singleSrc = (cand.opSourceIds || [])[k];
+                const singleSrc = (u.opSourceIds || [])[k];
                 if (singleSrc) {
                     const r2 = await supabaseClient
                         .from('operations')
