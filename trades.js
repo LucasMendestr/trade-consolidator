@@ -152,7 +152,8 @@ async function consolidateTradesForUser() {
                         const avgEntry = avgEntryNumerator / (entryQty || 1);
                         let avgExitNumerator = 0; for (let j = 0; j < tradeOpen.exits.length; j++) { const e = tradeOpen.exits[j]; avgExitNumerator += parseFloat(e.price) * parseFloat(e.quantity); }
                         const avgExit = avgExitNumerator / (exitQty || 1);
-                        const pointsDiff = avgExit - avgEntry;
+                        const side = tradeOpen.type === 'LONG' ? 1 : -1;
+                        const pointsDiff = (avgExit - avgEntry) * side;
                         let totalComm = 0; for (let j = 0; j < tradeOpen.entries.length; j++) { totalComm += parseFloat(tradeOpen.entries[j].commission || 0); } for (let j = 0; j < tradeOpen.exits.length; j++) { totalComm += parseFloat(tradeOpen.exits[j].commission || 0); }
                         const instrumentCode = (tradeOpen.instrument || '').substring(0, 3);
                         const multipliers = { 'NQ': 20, 'MNQ': 2, 'GC': 100, 'MGC': 10 };
@@ -256,7 +257,8 @@ async function consolidateTradesForUserBatch() {
                         const avgEntry = avgEntryNumerator / (entryQty || 1);
                         let avgExitNumerator = 0; for (let j = 0; j < tradeOpen.exits.length; j++) { const e = tradeOpen.exits[j]; avgExitNumerator += parseFloat(e.price) * parseFloat(e.quantity); }
                         const avgExit = avgExitNumerator / (exitQty || 1);
-                        const pointsDiff = avgExit - avgEntry;
+                        const side = tradeOpen.type === 'LONG' ? 1 : -1;
+                        const pointsDiff = (avgExit - avgEntry) * side;
                         let totalComm = 0; for (let j = 0; j < tradeOpen.entries.length; j++) { totalComm += parseFloat(tradeOpen.entries[j].commission || 0); } for (let j = 0; j < tradeOpen.exits.length; j++) { totalComm += parseFloat(tradeOpen.exits[j].commission || 0); }
                         const instrumentCode = (tradeOpen.instrument || '').substring(0, 3);
                         const multipliers = { 'NQ': 20, 'MNQ': 2, 'GC': 100, 'MGC': 10 };
