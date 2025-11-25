@@ -66,14 +66,14 @@ function updateDashboard() {
             '</div>' +
             '<div class="meter"><div class="fill-green" style="width:' + ((Math.abs(bestDay||0)/bestAbs)*100).toFixed(0) + '%"></div><div class="fill-red" style="width:' + ((Math.abs(worstDay||0)/bestAbs)*100).toFixed(0) + '%"></div></div>' +
         '</div>' +
-        '<div class="stat-card col-span-6">' +
+        '<div class="stat-card col-span-6 card-winrate">' +
             '<div class="card-title">Taxa de Acerto</div>' +
             '<div class="kpi-row">' +
                 '<div class="kpi"><div class="label">Trades</div><div class="value">' + totalTrades + '</div></div>' +
                 '<div class="kpi"><div class="label">Wins</div><div class="value" style="color:var(--positive)">' + wins + '</div></div>' +
                 '<div class="kpi"><div class="label">Losses</div><div class="value" style="color:var(--negative)">' + losses + '</div></div>' +
             '</div>' +
-            '<canvas id="miniHitGauge" class="mini-chart"></canvas>' +
+            '<canvas id="miniHitGauge" class="donut-chart"></canvas>' +
         '</div>';
     renderMiniCards();
 }
