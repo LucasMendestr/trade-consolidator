@@ -37,7 +37,7 @@ function updateDashboard() {
                 '<div class="kpi"><div class="label">Perda</div><div class="value" style="color:var(--negative)">$' + (avgLoss !== null ? avgLoss.toFixed(2) : '-') + '</div></div>' +
                 '<div class="kpi"><div class="label">Payoff</div><div class="value">' + (payoffFactor !== null ? payoffFactor.toFixed(2) : '-') + '</div></div>' +
             '</div>' +
-            '<div class="meter"><div class="fill-green" style="width:' + (rrShare * 100).toFixed(0) + '%"></div></div>' +
+            '<div class="meter"><div class="fill-green" style="width:' + (rrShare * 100).toFixed(0) + '%"></div><div class="fill-red" style="width:' + (100 - (rrShare * 100).toFixed(0)) + '%"></div></div>' +
         '</div>' +
         '<div class="stat-card">' +
             '<div class="card-title">Maior Ganho / Maior Perda</div>' +
@@ -46,7 +46,7 @@ function updateDashboard() {
                 '<div class="kpi"><div class="label">Maior Perda</div><div class="value" style="color:var(--negative)">$' + (maxLoss !== null ? maxLoss.toFixed(2) : '-') + '</div></div>' +
                 '<div class="kpi"><div class="label">Média/Trade</div><div class="value">' + (avgPerTrade !== null ? ('$' + avgPerTrade.toFixed(2)) : '-') + '</div></div>' +
             '</div>' +
-            '<div class="meter"><div class="fill-green" style="width:' + ((Math.abs(maxGain || 0)/maxAbs)*100).toFixed(0) + '%"></div></div>' +
+            '<div class="meter"><div class="fill-green" style="width:' + ((Math.abs(maxGain || 0)/maxAbs)*100).toFixed(0) + '%"></div><div class="fill-red" style="width:' + (100 - ((Math.abs(maxGain || 0)/maxAbs)*100).toFixed(0)) + '%"></div></div>' +
         '</div>' +
         '<div class="stat-card">' +
             '<div class="card-title">Win/Loss Streak</div>' +
