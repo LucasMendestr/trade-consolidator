@@ -89,13 +89,13 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 
 /* Estatísticas */
 .stats-grid { display: grid; grid-template-columns: repeat(5, minmax(220px, 1fr)); gap: 12px; margin: 20px 0; }
-.stat-card { background: var(--card-bg); color: var(--text); padding: 16px; border-radius: 12px; border: 1px solid var(--grid); box-shadow: var(--shadow); }
-.stat-card .card-title { font-weight: 700; font-size: 14px; opacity: 0.9; display:flex; align-items:center; justify-content:space-between; }
-.stat-card .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
-.stat-card .kpi { background: var(--surface); border: 1px solid var(--grid); border-radius: 10px; padding: 8px; text-align:center; }
-.stat-card .kpi .label { font-size: 11px; opacity: 0.75; }
-.stat-card .kpi .value { font-size: 18px; font-weight: 700; }
-.mini-chart { width: 100%; height: 90px; }
+.stat-card { background: var(--card-bg); color: var(--text); padding: 14px; border-radius: 12px; border: 1px solid var(--grid); box-shadow: var(--shadow); min-height: 160px; }
+.stat-card .card-title { font-weight: 700; font-size: 13px; opacity: 0.9; display:flex; align-items:center; justify-content:space-between; }
+.stat-card .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+.stat-card .kpi { background: var(--surface); border: 1px solid var(--grid); border-radius: 10px; padding: 6px; text-align:center; }
+.stat-card .kpi .label { font-size: 10px; opacity: 0.75; }
+.stat-card .kpi .value { font-size: 16px; font-weight: 700; }
+.mini-chart { width: 100%; height: 70px; }
 .meter { height: 8px; background: var(--surface); border: 1px solid var(--grid); border-radius: 999px; overflow: hidden; margin-top: 10px; }
 .meter .fill-green { height: 100%; background: var(--positive); }
 .meter .fill-red { height: 100%; background: var(--negative); }

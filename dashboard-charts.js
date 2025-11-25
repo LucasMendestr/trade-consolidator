@@ -25,15 +25,6 @@ function updateDashboard() {
     var bestAbs = Math.max(Math.abs(bestDay || 0), Math.abs(worstDay || 0)) || 1;
     document.getElementById('statsGrid').innerHTML = 
         '<div class="stat-card">' +
-            '<div class="card-title">Trades/Wins/Losses</div>' +
-            '<div class="kpi-row">' +
-                '<div class="kpi"><div class="label">Trades</div><div class="value">' + totalTrades + '</div></div>' +
-                '<div class="kpi"><div class="label">Wins</div><div class="value" style="color:var(--positive)">' + wins + '</div></div>' +
-                '<div class="kpi"><div class="label">Losses</div><div class="value" style="color:var(--negative)">' + losses + '</div></div>' +
-            '</div>' +
-            '<canvas id="miniTradesPie" class="mini-chart"></canvas>' +
-        '</div>' +
-        '<div class="stat-card">' +
             '<div class="card-title">PnL Total</div>' +
             '<div class="kpi-row">' +
                 '<div class="kpi" style="grid-column: span 3"><div class="label">Total</div><div class="value" style="color:' + pnlColor + '">$' + totalPnL.toFixed(2) + '</div></div>' +
@@ -58,6 +49,27 @@ function updateDashboard() {
             '<div class="meter"><div class="fill-green" style="width:' + ((Math.abs(maxGain || 0)/maxAbs)*100).toFixed(0) + '%"></div></div>' +
         '</div>' +
         '<div class="stat-card">' +
+            '<div class="card-title">Win / Loss</div>' +
+            '<div class="kpi-row">' +
+                '<div class="kpi"><div class="label">Trades</div><div class="value">' + totalTrades + '</div></div>' +
+                '<div class="kpi"><div class="label">Wins</div><div class="value" style="color:var(--positive)">' + wins + '</div></div>' +
+                '<div class="kpi"><div class="label">Losses</div><div class="value" style="color:var(--negative)">' + losses + '</div></div>' +
+            '</div>' +
+            '<canvas id="miniTradesPie" class="mini-chart"></canvas>' +
+        '</div>' +
+        '<div class="stat-card">' +
+            '<div class="card-title">Melhor/Pior Dia</div>' +
+            '<div class="vbars">' +
+                '<div class="vbar"><div class="fill" style="height:' + ((Math.abs(bestDay||0)/bestAbs)*100).toFixed(0) + '%"></div></div>' +
+                '<div class="vbar right"><div class="fill" style="height:' + ((Math.abs(worstDay||0)/bestAbs)*100).toFixed(0) + '%"></div></div>' +
+            '</div>' +
+            '<div class="kpi-row">' +
+                '<div class="kpi"><div class="label">Melhor</div><div class="value" style="color:var(--positive)">' + (bestDay !== null ? ('$' + bestDay.toFixed(2)) : '-') + '</div></div>' +
+                '<div class="kpi"><div class="label">Pior</div><div class="value" style="color:var(--negative)">' + (worstDay !== null ? ('$' + worstDay.toFixed(2)) : '-') + '</div></div>' +
+                '<div class="kpi"><div class="label">PF</div><div class="value">' + (profitFactor !== null ? profitFactor.toFixed(2) : '-') + '</div></div>' +
+            '</div>' +
+        '</div>' +
+        '<div class="stat-card">' +
             '<div class="card-title">Taxa de Acerto</div>' +
             '<canvas id="miniHitGauge" class="mini-chart"></canvas>' +
             '<div class="kpi" style="margin-top:10px"><div class="label">Win %</div><div class="value" style="color:var(--positive)">' + hitPct.toFixed(2) + '%</div></div>' +
@@ -72,18 +84,6 @@ function updateDashboard() {
                 '<div class="kpi"><div class="label">W Streak</div><div class="value" style="color:var(--positive)">' + maxWinStreak + '</div></div>' +
                 '<div class="kpi"><div class="label">L Streak</div><div class="value" style="color:var(--negative)">' + maxLossStreak + '</div></div>' +
                 '<div class="kpi"><div class="label">Média/Dia</div><div class="value">' + (avgPerDay !== null ? ('$' + avgPerDay.toFixed(2)) : '-') + '</div></div>' +
-            '</div>' +
-        '</div>' +
-        '<div class="stat-card">' +
-            '<div class="card-title">Melhor/Pior Dia</div>' +
-            '<div class="vbars">' +
-                '<div class="vbar"><div class="fill" style="height:' + ((Math.abs(bestDay||0)/bestAbs)*100).toFixed(0) + '%"></div></div>' +
-                '<div class="vbar right"><div class="fill" style="height:' + ((Math.abs(worstDay||0)/bestAbs)*100).toFixed(0) + '%"></div></div>' +
-            '</div>' +
-            '<div class="kpi-row">' +
-                '<div class="kpi"><div class="label">Melhor</div><div class="value" style="color:var(--positive)">' + (bestDay !== null ? ('$' + bestDay.toFixed(2)) : '-') + '</div></div>' +
-                '<div class="kpi"><div class="label">Pior</div><div class="value" style="color:var(--negative)">' + (worstDay !== null ? ('$' + worstDay.toFixed(2)) : '-') + '</div></div>' +
-                '<div class="kpi"><div class="label">PF</div><div class="value">' + (profitFactor !== null ? profitFactor.toFixed(2) : '-') + '</div></div>' +
             '</div>' +
         '</div>';
     renderMiniCards();
