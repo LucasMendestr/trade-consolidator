@@ -50,15 +50,12 @@ function updateDashboard() {
         '</div>' +
         '<div class="stat-card">' +
             '<div class="card-title">Win/Loss Streak</div>' +
-            '<div class="vbars">' +
-                '<div class="vbar"><div class="fill" style="height:' + ((maxWinStreak/Math.max(maxWinStreak,maxLossStreak||1))*100).toFixed(0) + '%"></div></div>' +
-                '<div class="vbar right"><div class="fill" style="height:' + ((maxLossStreak/Math.max(maxWinStreak,maxLossStreak||1))*100).toFixed(0) + '%"></div></div>' +
-            '</div>' +
             '<div class="kpi-row">' +
                 '<div class="kpi"><div class="label">W Streak</div><div class="value" style="color:var(--positive)">' + maxWinStreak + '</div></div>' +
                 '<div class="kpi"><div class="label">L Streak</div><div class="value" style="color:var(--negative)">' + maxLossStreak + '</div></div>' +
                 '<div class="kpi"><div class="label">Média/Dia</div><div class="value">' + (avgPerDay !== null ? ('$' + avgPerDay.toFixed(2)) : '-') + '</div></div>' +
             '</div>' +
+            '<div class="meter"><div class="fill-green" style="width:' + ((maxWinStreak/Math.max(maxWinStreak + maxLossStreak,1))*100).toFixed(0) + '%"></div><div class="fill-red" style="width:' + ((maxLossStreak/Math.max(maxWinStreak + maxLossStreak,1))*100).toFixed(0) + '%"></div></div>' +
         '</div>' +
         '<div class="stat-card">' +
             '<div class="card-title">Melhor/Pior Dia</div>' +
