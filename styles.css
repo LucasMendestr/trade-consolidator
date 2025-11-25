@@ -136,7 +136,13 @@ h3 { margin: 15px 0 10px 0; font-size: 16px; color: var(--text); }
 .sidebar { width: 260px; background: linear-gradient(180deg, rgba(34,211,238,0.15), rgba(16,185,129,0.10)); border-right: 1px solid var(--grid); min-height: 100vh; position: sticky; top: 0; padding: 16px 12px; }
 .sidebar.collapsed { width: 64px; }
 .sidebar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.sidebar-brand { font-weight: 700; letter-spacing: 0.5px; }
+.sidebar-brand { display:flex; align-items:center; gap:10px; }
+.brand-name { font-weight: 700; letter-spacing: 0.5px; }
+.brand-logo { display:inline-flex; align-items:center; justify-content:center; width: 28px; height: 28px; border-radius: 8px; background: var(--surface); border: 1px solid var(--grid); }
+.brand-logo .logo-svg { width: 20px; height: 20px; fill: var(--accent); }
+.sidebar.collapsed .brand-name { display: none; }
+.sidebar.collapsed .brand-logo { width: 36px; height: 36px; }
+.sidebar.collapsed .brand-logo .logo-svg { width: 24px; height: 24px; }
 .sidebar-toggle { background: var(--surface); color: var(--text); border: none; border-radius: 8px; width: 36px; height: 36px; cursor: pointer; }
 .sidebar-actions { margin-bottom: 12px; }
 .sidebar .btn-upload { display: block; width: 100%; background: var(--accent); color: #fff; font-weight: 700; padding: 10px 12px; border-radius: 8px; text-align: center; }
@@ -145,6 +151,7 @@ h3 { margin: 15px 0 10px 0; font-size: 16px; color: var(--text); }
 .nav-link { display: flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; padding: 10px 12px; border-radius: 8px; }
 .nav-link:hover { background: var(--surface); }
 .nav-icon { width: 20px; text-align: center; opacity: 0.9; }
+.sidebar.collapsed .nav-icon { width: 20px; }
 .sidebar.collapsed .nav-text { display: none; }
 .sidebar.collapsed .sidebar-actions { display: none; }
 
