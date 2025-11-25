@@ -79,6 +79,9 @@
                             <input type="hidden" id="dateTo">
                         </div>
                     </div>
+                    <div class="filter-item">
+                        <button class="btn btn-secondary small" onclick="clearFilters()">Limpar</button>
+                    </div>
                 </div>
             </div>
         <h2>📈 Estatísticas</h2>
@@ -126,6 +129,7 @@
     })();
     function toggleDatePanel(ev){ ev && ev.stopPropagation(); var p = document.getElementById('datePanel'); if (p) { p.classList.toggle('open'); } }
     function setPreset(p){ var dp = document.getElementById('datePreset'); var df = document.getElementById('dateFrom'); var dt = document.getElementById('dateTo'); if (dp && df && dt) { dp.value = p; df.value = ''; dt.value = ''; filterTrades(); } }
+    function clearFilters(){ try { var af=document.getElementById('accountFilter'); var sf=document.getElementById('strategyFilter'); var inf=document.getElementById('instrumentFilter'); var dp=document.getElementById('datePreset'); var df=document.getElementById('dateFrom'); var dt=document.getElementById('dateTo'); var dri=document.getElementById('dateRangeInput'); if(af) af.value=''; if(sf) sf.value=''; if(inf) inf.value=''; if(dp) dp.value=''; if(df) df.value=''; if(dt) dt.value=''; if(dri) dri.value=''; } catch(e){} filterTrades(); }
     </script>
     <script src="globals.js"></script>
     <script src="supabase-init.js"></script>
