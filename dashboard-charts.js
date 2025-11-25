@@ -62,15 +62,12 @@ function updateDashboard() {
         '</div>' +
         '<div class="stat-card">' +
             '<div class="card-title">Melhor/Pior Dia</div>' +
-            '<div class="vbars">' +
-                '<div class="vbar"><div class="fill" style="height:' + ((Math.abs(bestDay||0)/bestAbs)*100).toFixed(0) + '%"></div></div>' +
-                '<div class="vbar right"><div class="fill" style="height:' + ((Math.abs(worstDay||0)/bestAbs)*100).toFixed(0) + '%"></div></div>' +
-            '</div>' +
             '<div class="kpi-row">' +
                 '<div class="kpi"><div class="label">Melhor</div><div class="value" style="color:var(--positive)">' + (bestDay !== null ? ('$' + bestDay.toFixed(2)) : '-') + '</div></div>' +
                 '<div class="kpi"><div class="label">Pior</div><div class="value" style="color:var(--negative)">' + (worstDay !== null ? ('$' + worstDay.toFixed(2)) : '-') + '</div></div>' +
                 '<div class="kpi"><div class="label">PF</div><div class="value">' + (profitFactor !== null ? profitFactor.toFixed(2) : '-') + '</div></div>' +
             '</div>' +
+            '<div class="meter"><div class="fill-green" style="width:' + ((Math.abs(bestDay||0)/bestAbs)*100).toFixed(0) + '%"></div><div class="fill-red" style="width:' + ((Math.abs(worstDay||0)/bestAbs)*100).toFixed(0) + '%"></div></div>' +
         '</div>' +
         '<div class="stat-card">' +
             '<div class="card-title">Win / Loss</div>' +
