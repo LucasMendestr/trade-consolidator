@@ -41,42 +41,46 @@
         </aside>
         <main class="main">
         <div class="app-container">
-            <div class="app-header" style="justify-content:flex-start;">
+            <div class="app-header">
                 <h1 style="margin:0;">Dashboard</h1>
-            </div>
-        <div class="filter-bar">
-            <div class="filter-item">
-                <label>Conta</label>
-                <select id="accountFilter" onchange="filterTrades()">
-                    <option value="">Todas as contas</option>
-                </select>
-            </div>
-            <div class="filter-item">
-                <label>Estratégia</label>
-                <select id="strategyFilter" onchange="filterTrades()">
-                    <option value="">Todas as estratégias</option>
-                </select>
-            </div>
-            <div class="filter-item">
-                <label>Instrumento</label>
-                <select id="instrumentFilter" onchange="filterTrades()">
-                    <option value="">Todos</option>
-                </select>
-            </div>
-            <div class="filter-item" style="flex:1; min-width:240px;">
-                <label>Data</label>
-                <div class="preset-buttons">
-                    <button class="btn" onclick="setPreset('this_week')">Essa semana</button>
-                    <button class="btn" onclick="setPreset('last_week')">Semana passada</button>
-                    <button class="btn" onclick="setPreset('this_month')">Esse mês</button>
-                    <button class="btn" onclick="setPreset('last_month')">Mês passado</button>
+                <div class="filter-inline">
+                    <div class="filter-item">
+                        <label>Conta</label>
+                        <select id="accountFilter" onchange="filterTrades()">
+                            <option value="">Todas as contas</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label>Estratégia</label>
+                        <select id="strategyFilter" onchange="filterTrades()">
+                            <option value="">Todas as estratégias</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label>Instrumento</label>
+                        <select id="instrumentFilter" onchange="filterTrades()">
+                            <option value="">Todos</option>
+                        </select>
+                    </div>
+                    <div class="filter-item dropdown">
+                        <button class="btn btn-secondary small" onclick="toggleDatePanel(event)">Data</button>
+                        <div id="datePanel" class="dropdown-panel">
+                            <div class="preset-buttons">
+                                <button class="btn" onclick="setPreset('this_week')">Essa semana</button>
+                                <button class="btn" onclick="setPreset('last_week')">Semana passada</button>
+                                <button class="btn" onclick="setPreset('this_month')">Esse mês</button>
+                                <button class="btn" onclick="setPreset('last_month')">Mês passado</button>
+                                <button class="btn" onclick="setPreset('this_year')">Esse ano</button>
+                                <button class="btn" onclick="setPreset('last_year')">Ano passado</button>
+                            </div>
+                            <input type="text" id="dateRangeInput" class="flatpickr-input" placeholder="Intervalo personalizado">
+                            <input type="hidden" id="datePreset">
+                            <input type="hidden" id="dateFrom">
+                            <input type="hidden" id="dateTo">
+                        </div>
+                    </div>
                 </div>
-                <input type="text" id="dateRangeInput" placeholder="Selecione intervalo personalizado">
-                <input type="hidden" id="datePreset">
-                <input type="hidden" id="dateFrom">
-                <input type="hidden" id="dateTo">
             </div>
-        </div>
         <h2>📈 Estatísticas</h2>
         <div class="stats-grid" id="statsGrid"></div>
         <h2>📉 Gráficos</h2>
@@ -118,7 +122,9 @@
     <script>
     (function(){
         var fp = flatpickr('#dateRangeInput', { mode: 'range', dateFormat: 'Y-m-d', onChange: function(sel){ if (!sel || sel.length < 2) return; var f = sel[0]; var t = sel[1]; var df = document.getElementById('dateFrom'); var dt = document.getElementById('dateTo'); var dp = document.getElementById('datePreset'); if (df && dt && dp) { dp.value = ''; df.value = fp.formatDate(f, 'Y-m-d'); dt.value = fp.formatDate(t, 'Y-m-d'); filterTrades(); } } });
+        document.addEventListener('click', function(e){ var p = document.getElementById('datePanel'); if (!p) return; if (!p.contains(e.target) && !(e.target && e.target.closest('.dropdown'))) { p.classList.remove('open'); } });
     })();
+    function toggleDatePanel(ev){ ev && ev.stopPropagation(); var p = document.getElementById('datePanel'); if (p) { p.classList.toggle('open'); } }
     function setPreset(p){ var dp = document.getElementById('datePreset'); var df = document.getElementById('dateFrom'); var dt = document.getElementById('dateTo'); if (dp && df && dt) { dp.value = p; df.value = ''; dt.value = ''; filterTrades(); } }
     </script>
     <script src="globals.js"></script>
