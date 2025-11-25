@@ -129,8 +129,7 @@ function renderMiniCards() {
     const accent = cs.getPropertyValue('--accent').trim() || '#22d3ee';
     const gridColor = cs.getPropertyValue('--grid').trim() || '#334155';
     const textColor = cs.getPropertyValue('--text').trim() || '#e5e7eb';
-    const pieLabelsPlugin = { id: 'pieLabels', afterDatasetsDraw(chart) { try { const ctx = chart.ctx; const ds = chart.data && chart.data.datasets ? chart.data.datasets[0] : null; if (!ds) return; const meta = chart.getDatasetMeta(0); const total = (ds.data || []).reduce(function(a,b){ return a + (parseFloat(b) || 0); }, 0) || 1; ctx.save(); ctx.font = '600 12px Inter, Arial, sans-serif'; ctx.fillStyle = (chart.options && chart.options.plugins && chart.options.plugins.pieLabels && chart.options.plugins.pieLabels.color) || textColor; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; for (let i = 0; i < meta.data.length; i++) { const arc = meta.data[i]; const val = parseFloat(ds.data[i] || 0); const pct = Math.round((val / total) * 100); const pos = arc.tooltipPosition(); ctx.fillText(pct + '%', pos.x, pos.y); } ctx.restore(); } catch (e) {} } };
-    if (typeof Chart !== 'undefined' && !charts._pieLabelsRegistered) { Chart.register(pieLabelsPlugin); charts._pieLabelsRegistered = true; }
+    // remove custom percentage labels plugin to keep charts clean
     const pieEl = document.getElementById('miniTradesPie');
     const gaugeEl = document.getElementById('miniHitGauge');
     if (pieEl) {
