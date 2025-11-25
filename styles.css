@@ -88,10 +88,10 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .upload-area p { color: var(--text); margin: 5px 0; }
 
 /* Estatísticas */
-.stats-grid { display: grid; grid-template-columns: repeat(5, minmax(220px, 1fr)); gap: 12px; margin: 20px 0; }
-.stat-card { background: var(--card-bg); color: var(--text); padding: 14px; border-radius: 12px; border: 1px solid var(--grid); box-shadow: var(--shadow); min-height: 160px; }
-.stat-card .card-title { font-weight: 700; font-size: 13px; opacity: 0.9; display:flex; align-items:center; justify-content:space-between; }
-.stat-card .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+.stats-grid { display: grid; grid-template-columns: repeat(5, minmax(220px, 1fr)); gap: 12px; margin: 20px 0; justify-items: center; }
+.stat-card { background: var(--card-bg); color: var(--text); padding: 14px; border-radius: 12px; border: 1px solid var(--grid); box-shadow: var(--shadow); min-height: 160px; text-align: center; }
+.stat-card .card-title { font-weight: 700; font-size: 13px; opacity: 0.9; display:flex; align-items:center; justify-content:center; }
+.stat-card .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; justify-items: center; }
 .stat-card .kpi { background: var(--surface); border: 1px solid var(--grid); border-radius: 10px; padding: 6px; text-align:center; }
 .stat-card .kpi .label { font-size: 10px; opacity: 0.75; }
 .stat-card .kpi .value { font-size: 16px; font-weight: 700; }
