@@ -4,36 +4,46 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Estratégias • Trade Consolidator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        :root { --bg:#0f172a; --text:#e5e7eb; --card-bg:#111827; --primary:#22d3ee; --surface:#1f2937; }
-        body { font-family: Arial, sans-serif; background: var(--bg); color: var(--text); }
-        .app-container { background: var(--card-bg); padding: 30px; width: 100%; margin: 0; border-radius: 0; }
-        .app-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ddd; padding-bottom: 20px; margin-bottom: 20px; }
-        .btn { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.3s; }
-        .btn-primary { background: var(--primary); color: white; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; color: var(--text); }
-        .form-group input { width: 100%; padding: 10px; border: 1px solid #334155; border-radius: 4px; background: var(--surface); color: var(--text); }
-        .form-group input::placeholder { color: #9ca3af; }
-        select { width: 280px; padding: 8px; border: 1px solid #334155; border-radius: 4px; font-size: 14px; background: var(--surface); color: var(--text); }
-        nav a { margin-right: 12px; color: var(--text); text-decoration: none; font-weight: bold; }
-        nav a:hover { text-decoration: underline; }
-    </style>
 </head>
 <body>
-    <div class="app-container">
-        <div class="app-header">
-            <h1>🧠 Estratégias</h1>
-            <div></div>
-        </div>
-        <nav>
-            <a href="dashboard.html">Dashboard</a>
-            <a href="trades.html">Trades</a>
-            <a href="upload.html">Upload</a>
-            <a href="strategies.html">Estratégias</a>
-        </nav>
+    <div class="layout">
+        <aside id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-brand">
+                    <span class="brand-logo" title="Trade Consolidator">
+                        <svg class="logo-svg" viewBox="0 0 24 24" aria-hidden="true">
+                            <rect x="3" y="12" width="4" height="9" rx="1"></rect>
+                            <rect x="10" y="7" width="4" height="14" rx="1"></rect>
+                            <rect x="17" y="3" width="4" height="18" rx="1"></rect>
+                        </svg>
+                    </span>
+                    <span class="brand-name">Trade Consolidator</span>
+                </div>
+                <button id="sidebarToggle" class="sidebar-toggle">≪</button>
+            </div>
+            <div class="sidebar-actions">
+                <button class="btn btn-upload" onclick="openUploadModal()">+ Upload CSV</button>
+            </div>
+            <ul class="nav-list">
+                <li class="nav-item"><a class="nav-link" href="dashboard.html"><span class="nav-icon">📊</span><span class="nav-text">Dashboard</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="trades.html"><span class="nav-icon">📋</span><span class="nav-text">Trades</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="strategies.html"><span class="nav-icon">🧠</span><span class="nav-text">Estratégias</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="diario.html"><span class="nav-icon">📓</span><span class="nav-text">Diário</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="reportes.html"><span class="nav-icon">📈</span><span class="nav-text">Reportes</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="playbook.html"><span class="nav-icon">📘</span><span class="nav-text">Playbook</span></a></li>
+            </ul>
+        </aside>
+        <main class="main">
+        <div class="app-container">
+            <div class="app-header">
+                <h1>🧠 Estratégias</h1>
+                <div></div>
+            </div>
         <div class="upload-section" id="strategiesSection" style="background: var(--card-bg); padding: 15px; border-radius: 8px; margin-top: 10px;">
             <div class="form-group"><label>Nome</label><input type="text" id="strategyName"></div>
             <div class="form-group"><label>Timeframe</label><input type="text" id="strategyTimeframe"></div>
@@ -58,10 +68,36 @@
                 <tbody id="strategiesTableBody"></tbody>
             </table>
         </div>
+        </div>
+        </main>
     </div>
+    <div id="modalBackdrop" class="modal-backdrop"></div>
+    <div id="uploadModal" class="modal">
+        <div class="modal-card">
+            <div class="modal-header"><strong>📤 Importar CSV</strong><button class="close-btn" onclick="closeUploadModal()">✕</button></div>
+            <div>
+                <input type="file" id="csvFileModal" accept=".csv" style="display:none" onchange="handleFileUpload(event)">
+                <button class="btn btn-primary" onclick="document.getElementById('csvFileModal').click()">Selecionar arquivo CSV</button>
+                <div id="uploadMessage" style="margin-top:8px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeUploadModal()">Fechar</button>
+            </div>
+        </div>
+    </div>
+    <script>
+    (function(){
+        var btn = document.getElementById('sidebarToggle');
+        var sb = document.getElementById('sidebar');
+        if (btn && sb) { btn.addEventListener('click', function(){ sb.classList.toggle('collapsed'); }); }
+    })();
+    function openUploadModal(){ var m = document.getElementById('uploadModal'); var b = document.getElementById('modalBackdrop'); if (m && b) { m.classList.add('open'); b.classList.add('open'); } }
+    function closeUploadModal(){ var m = document.getElementById('uploadModal'); var b = document.getElementById('modalBackdrop'); if (m && b) { m.classList.remove('open'); b.classList.remove('open'); } }
+    </script>
     <script src="globals.js"></script>
     <script src="supabase-init.js"></script>
     <script src="theme.js"></script>
+    <script src="operations.js"></script>
     <script src="strategies.js"></script>
     <script src="trades.js"></script>
     <script src="main.js"></script>
