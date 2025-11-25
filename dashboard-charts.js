@@ -77,8 +77,12 @@ function updateDashboard() {
         '</div>' +
         '<div class="stat-card">' +
             '<div class="card-title">Taxa de Acerto</div>' +
+            '<div class="kpi-row">' +
+                '<div class="kpi"><div class="label">Trades</div><div class="value">' + totalTrades + '</div></div>' +
+                '<div class="kpi"><div class="label">Wins</div><div class="value" style="color:var(--positive)">' + wins + '</div></div>' +
+                '<div class="kpi"><div class="label">Losses</div><div class="value" style="color:var(--negative)">' + losses + '</div></div>' +
+            '</div>' +
             '<canvas id="miniHitGauge" class="mini-chart"></canvas>' +
-            '<div class="kpi" style="margin-top:10px"><div class="label">Win %</div><div class="value" style="color:var(--positive)">' + hitPct.toFixed(2) + '%</div></div>' +
         '</div>';
     renderMiniCards();
 }
@@ -140,6 +144,6 @@ function renderMiniCards() {
         let wins = 0, losses = 0; for (let i = 0; i < filteredTrades.length; i++) { const p = parseFloat(filteredTrades[i].pnlDollars || 0); if (p > 0) wins++; else if (p < 0) losses++; }
         const hit = (wins + losses) > 0 ? (wins / (wins + losses)) * 100 : 0;
         if (charts.miniGauge) charts.miniGauge.destroy();
-        charts.miniGauge = new Chart(gaugeEl.getContext('2d'), { type: 'doughnut', data: { labels: ['Win','Rest'], datasets: [{ data: [hit, 100-hit], backgroundColor: [positive, gridColor] }] }, options: { plugins: { legend: { display: false } }, cutout: '70%', circumference: 270, rotation: 225 } });
+        charts.miniGauge = new Chart(gaugeEl.getContext('2d'), { type: 'doughnut', data: { labels: ['Win','Loss'], datasets: [{ data: [hit, 100-hit], backgroundColor: [positive, negative] }] }, options: { plugins: { legend: { display: false } }, cutout: '70%', circumference: 270, rotation: 225 } });
     }
 }
