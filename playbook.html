@@ -66,7 +66,7 @@
     (function(){
         var btn = document.getElementById('sidebarToggle');
         var sb = document.getElementById('sidebar');
-        if (btn && sb) { btn.addEventListener('click', function(){ sb.classList.toggle('collapsed'); }); }
+        if (btn && sb) { btn.addEventListener('click', function(){ sb.classList.toggle('collapsed'); document.body.classList.toggle('sidebar-collapsed'); }); }
     })();
     function openUploadModal(){ var m = document.getElementById('uploadModal'); var b = document.getElementById('modalBackdrop'); if (m && b) { m.classList.add('open'); b.classList.add('open'); } }
     function closeUploadModal(){ var m = document.getElementById('uploadModal'); var b = document.getElementById('modalBackdrop'); if (m && b) { m.classList.remove('open'); b.classList.remove('open'); } }
