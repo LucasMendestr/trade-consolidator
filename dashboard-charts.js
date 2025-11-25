@@ -88,6 +88,7 @@ function renderCharts() {
     if (typeof Chart !== 'undefined') {
         Chart.defaults.font.family = 'Inter, Arial, sans-serif';
         Chart.defaults.color = textColor;
+        Chart.defaults.font.size = 12;
         Chart.defaults.borderColor = gridColor;
     }
     const elDailyCum = document.getElementById('chartDailyCumulative');
@@ -100,19 +101,25 @@ function renderCharts() {
     const dates = Object.keys(dailyMap).sort(); const dailyVals = dates.map(function(k) { return dailyMap[k]; });
     const cumulative = []; let run = 0; for (let i = 0; i < dailyVals.length; i++) { run += dailyVals[i]; cumulative.push(run); }
     if (charts.dailyCumulative) charts.dailyCumulative.destroy();
-    charts.dailyCumulative = new Chart(elDailyCum.getContext('2d'), { type: 'line', data: { labels: dates, datasets: [{ label: 'PnL Diário Acumulado', data: cumulative, borderColor: accent, backgroundColor: 'rgba(34,211,238,0.15)', tension: 0.25 }] }, options: { plugins: { legend: { display: false } }, scales: { x: { grid: { color: gridColor }, ticks: { color: textColor } }, y: { grid: { color: gridColor }, ticks: { color: textColor } } } } });
+    const gCum = elDailyCum.getContext('2d').createLinearGradient(0, 0, 0, elDailyCum.height);
+    gCum.addColorStop(0, 'rgba(34,197,94,0.15)');
+    gCum.addColorStop(1, 'rgba(34,197,94,0.00)');
+    charts.dailyCumulative = new Chart(elDailyCum.getContext('2d'), { type: 'line', data: { labels: dates, datasets: [{ label: 'PnL Diário Acumulado', data: cumulative, borderColor: accent, backgroundColor: gCum, tension: 0.35, borderWidth: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: true, padding: 8 } }, scales: { x: { grid: { color: 'rgba(148,163,184,0.2)' }, ticks: { color: textColor } }, y: { grid: { color: 'rgba(148,163,184,0.2)' }, ticks: { color: textColor } } } } });
     if (charts.dailyBar) charts.dailyBar.destroy();
-    charts.dailyBar = new Chart(elDailyBar.getContext('2d'), { type: 'bar', data: { labels: dates, datasets: [{ label: 'PnL Diário', data: dailyVals, backgroundColor: dailyVals.map(function(v){ return v >= 0 ? positive : negative; }) }] }, options: { plugins: { legend: { display: false } }, scales: { x: { grid: { color: gridColor }, ticks: { color: textColor } }, y: { grid: { color: gridColor }, ticks: { color: textColor } } } } });
+    charts.dailyBar = new Chart(elDailyBar.getContext('2d'), { type: 'bar', data: { labels: dates, datasets: [{ label: 'PnL Diário', data: dailyVals, backgroundColor: dailyVals.map(function(v){ return v >= 0 ? positive : negative; }), borderColor: '#ffffff22', borderWidth: 1, categoryPercentage: 0.7, barPercentage: 0.8 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: true, padding: 8 }, datalabels: { anchor: 'end', align: 'end', color: textColor, formatter: function(v){ return (v>=0?'+':'') + v.toFixed(0); }, font: { weight: '700', size: 12 } } }, scales: { x: { grid: { color: 'rgba(148,163,184,0.2)' }, ticks: { color: textColor } }, y: { grid: { color: 'rgba(148,163,184,0.2)' }, ticks: { color: textColor } } } } });
     const instMap = {}; for (let i = 0; i < closed.length; i++) { const ins = closed[i].instrument; const pnl = parseFloat(closed[i].pnlDollars || 0); instMap[ins] = (instMap[ins] || 0) + pnl; }
     const insts = Object.keys(instMap); const instVals = insts.map(function(k) { return instMap[k]; });
     if (charts.pnlInstrument) charts.pnlInstrument.destroy();
-    charts.pnlInstrument = new Chart(elInst.getContext('2d'), { type: 'bar', data: { labels: insts, datasets: [{ label: 'PnL por Instrumento', data: instVals, backgroundColor: accent }] }, options: { plugins: { legend: { display: false } }, scales: { x: { grid: { color: gridColor }, ticks: { color: textColor } }, y: { grid: { color: gridColor }, ticks: { color: textColor } } } } });
+    charts.pnlInstrument = new Chart(elInst.getContext('2d'), { type: 'bar', data: { labels: insts, datasets: [{ label: 'PnL por Instrumento', data: instVals, backgroundColor: accent, borderColor: '#ffffff22', borderWidth: 1, categoryPercentage: 0.7, barPercentage: 0.8 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: true, padding: 8 }, datalabels: { anchor: 'end', align: 'end', color: textColor, formatter: function(v){ return (v>=0?'+':'') + v.toFixed(0); }, font: { weight: '700', size: 12 } } }, scales: { x: { grid: { color: 'rgba(148,163,184,0.2)' }, ticks: { color: textColor } }, y: { grid: { color: 'rgba(148,163,184,0.2)' }, ticks: { color: textColor } } } } });
     let w = 0, l = 0; for (let i = 0; i < closed.length; i++) { const p = parseFloat(closed[i].pnlDollars || 0); if (p > 0) w++; else if (p < 0) l++; }
     const sorted = closed.slice().sort(function(a, b) { return new Date(a.endTime) - new Date(b.endTime); });
     const wrLabels = [], wrData = []; let cw = 0, cl = 0;
     for (let i = 0; i < sorted.length; i++) { const p = parseFloat(sorted[i].pnlDollars || 0); if (p > 0) cw++; else if (p < 0) cl++; const rate = (cw + cl) > 0 ? (cw / (cw + cl)) * 100 : 0; wrLabels.push(new Date(sorted[i].endTime).toLocaleDateString('pt-BR')); wrData.push(rate.toFixed(2)); }
     if (charts.winRate) charts.winRate.destroy();
-    charts.winRate = new Chart(elWinRate.getContext('2d'), { type: 'line', data: { labels: wrLabels, datasets: [{ label: 'Win Rate Acumulado (%)', data: wrData, borderColor: positive, backgroundColor: 'rgba(16,185,129,0.15)', tension: 0.25 }] }, options: { plugins: { legend: { display: false } }, scales: { x: { grid: { color: gridColor }, ticks: { color: textColor } }, y: { grid: { color: gridColor }, ticks: { color: textColor } } } } });
+    const gWr = elWinRate.getContext('2d').createLinearGradient(0, 0, 0, elWinRate.height);
+    gWr.addColorStop(0, 'rgba(16,185,129,0.10)');
+    gWr.addColorStop(1, 'rgba(16,185,129,0.00)');
+    charts.winRate = new Chart(elWinRate.getContext('2d'), { type: 'line', data: { labels: wrLabels, datasets: [{ label: 'Win Rate Acumulado (%)', data: wrData, borderColor: positive, backgroundColor: gWr, tension: 0.35, borderWidth: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: true, padding: 8 } }, scales: { x: { grid: { color: 'rgba(148,163,184,0.2)' }, ticks: { color: textColor } }, y: { grid: { color: 'rgba(148,163,184,0.2)' }, ticks: { color: textColor } } } } });
 }
 
 function renderMiniCards() {

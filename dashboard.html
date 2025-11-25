@@ -85,12 +85,13 @@
                 </div>
             </div>
         <div class="stats-grid" id="statsGrid"></div>
-        <div id="chartsSection" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:20px;">
-            <div style="background: var(--card-bg); padding: 15px; border-radius: 8px;"><strong>PnL Diário Acumulado</strong><canvas id="chartDailyCumulative" height="140"></canvas></div>
-            <div style="background: var(--card-bg); padding: 15px; border-radius: 8px;"><strong>PnL por Instrumento</strong><canvas id="chartPnlInstrument" height="140"></canvas></div>
-            <div style="background: var(--card-bg); padding: 15px; border-radius: 8px;"><strong>Win Rate Acumulado</strong><canvas id="chartWinRateCumulative" height="140"></canvas></div>
-            <div style="background: var(--card-bg); padding: 15px; border-radius: 8px;"><strong>PnL Diário</strong><canvas id="chartDailyBar" height="140"></canvas></div>
+        <div id="chartsSection" class="charts-grid">
+            <div class="chart-card"><strong>PnL Diário Acumulado</strong><canvas id="chartDailyCumulative" class="chart-canvas"></canvas></div>
+            <div class="chart-card"><strong>PnL por Instrumento</strong><canvas id="chartPnlInstrument" class="chart-canvas"></canvas></div>
+            <div class="chart-card"><strong>Win Rate Acumulado</strong><canvas id="chartWinRateCumulative" class="chart-canvas"></canvas></div>
+            <div class="chart-card"><strong>PnL Diário</strong><canvas id="chartDailyBar" class="chart-canvas"></canvas></div>
         </div>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
         </div>
         </main>
     </div>
