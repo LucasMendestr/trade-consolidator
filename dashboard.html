@@ -4,24 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard • Trade Consolidator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        :root { --bg:#0f172a; --text:#e5e7eb; --card-bg:#111827; --header-bg:#111827; --surface:#1f2937; --accent:#22d3ee; --positive:#10b981; --negative:#ef4444; --grid:#334155; }
-        body { font-family: Arial, sans-serif; background: var(--bg); color: var(--text); }
-        .app-container { background: var(--card-bg); padding: 30px; width: 100%; margin: 0; border-radius: 0; }
-        .app-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ddd; padding-bottom: 20px; margin-bottom: 20px; }
-        .btn { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.3s; }
-        .btn-secondary { background: var(--surface); }
-        nav a { margin-right: 12px; color: var(--text); text-decoration: none; font-weight: bold; }
-        nav a:hover { text-decoration: underline; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 20px 0; }
-        .stat-card { background: linear-gradient(135deg, rgba(34,211,238,0.2) 0%, rgba(16,185,129,0.2) 100%); border: 1px solid var(--grid); color: var(--text); padding: 20px; border-radius: 8px; text-align: center; }
-        .filter-section { background: var(--surface); padding: 15px; border-radius: 8px; margin: 20px 0; }
-        select { width: 280px; padding: 8px; border: 1px solid #334155; border-radius: 4px; font-size: 14px; background: var(--surface); color: var(--text); }
-    </style>
 </head>
 <body>
     <div class="app-container">

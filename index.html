@@ -4,101 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trade Consolidator Pro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; background: #667eea; min-height: 100vh; }
-        
-        .login-container { background: #111827; padding: 40px; max-width: 400px; margin: 50px auto; border-radius: 8px; border: 1px solid #334155; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
-        .login-container h1 { text-align: center; margin-bottom: 20px; color: #e5e7eb; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; color: #9ca3af; }
-        .form-group input { width: 100%; padding: 10px; border: 1px solid #334155; border-radius: 4px; background: #1f2937; color: #e5e7eb; }
-        .form-group input::placeholder { color: #9ca3af; }
-        
-        .btn { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.3s; }
-        .btn-primary { background: #2196F3; color: white; width: 100%; margin: 10px 0; }
-        .btn-primary:hover { background: #1976D2; }
-        .btn-secondary { background: #f0f0f0; width: 100%; margin: 10px 0; }
-        .btn-secondary:hover { background: #e0e0e0; }
-        .btn-danger { background: #f44336; color: white; padding: 8px 15px; }
-        .btn-danger:hover { background: #d32f2f; }
-        
-        .error { background: #ffebee; color: #f44336; padding: 10px; border-radius: 4px; margin: 10px 0; }
-        .success { background: #e8f5e9; color: #4CAF50; padding: 10px; border-radius: 4px; margin: 10px 0; }
-        
-        .app-container { background: white; padding: 30px; max-width: 1400px; margin: 20px auto; border-radius: 8px; }
-        .app-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ddd; padding-bottom: 20px; margin-bottom: 20px; }
-        .app-header h1 { font-size: 28px; }
-        .user-section { text-align: right; }
-        .user-section p { margin: 5px 0; color: #666; }
-        
-        .upload-section { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-        .upload-controls { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .upload-area { border: 2px dashed #2196F3; padding: 40px; text-align: center; border-radius: 8px; cursor: pointer; background: #f0f7ff; margin: 10px 0; transition: 0.3s; }
-        .upload-area:hover { background: #e3f2fd; border-color: #1976D2; }
-        .upload-area p { color: #333; margin: 5px 0; }
-        
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 20px 0; }
-        .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; }
-        .stat-label { font-size: 12px; text-transform: uppercase; opacity: 0.9; }
-        .stat-value { font-size: 28px; font-weight: bold; margin-top: 10px; }
-        
-        .filter-section { background: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0; }
-        .filter-section label { font-weight: bold; display: block; margin-bottom: 10px; }
-        select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        table th { background: #f5f5f5; padding: 15px; text-align: left; font-weight: bold; border-bottom: 2px solid #ddd; }
-        table td { padding: 15px; border-bottom: 1px solid #ddd; }
-        table tbody tr:hover { background: #f9f9f9; cursor: pointer; }
-        table tbody tr { transition: 0.2s; }
-        
-        .status-closed { background: #e8f5e9; color: #2e7d32; padding: 5px 10px; border-radius: 4px; }
-        .status-open { background: #fff3e0; color: #e65100; padding: 5px 10px; border-radius: 4px; }
-        .pnl-positive { color: #2e7d32; font-weight: bold; }
-        .pnl-negative { color: #c62828; font-weight: bold; }
-        
-        #tradeDetails { display: none; margin-top: 30px; background: #f9f9f9; padding: 20px; border-radius: 8px; border-left: 5px solid #2196F3; }
-        .detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .close-btn { background: #f44336; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; }
-        .close-btn:hover { background: #d32f2f; }
-        
-        .detail-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 20px 0; }
-        .detail-item { background: white; padding: 15px; border-radius: 4px; }
-        .detail-item strong { display: block; font-size: 12px; color: #666; text-transform: uppercase; margin-bottom: 5px; }
-        .detail-item span { font-size: 18px; font-weight: bold; color: #2196F3; }
-        
-        #appScreen { display: none; }
-        #loginScreen { display: block; }
-        
-        .loading { text-align: center; padding: 20px; color: #666; }
-        h2 { margin: 20px 0 15px 0; font-size: 20px; color: #333; }
-        h3 { margin: 15px 0 10px 0; font-size: 16px; color: #333; }
-        :root { --bg:#0f172a; --text:#e5e7eb; --card-bg:#111827; --header-bg:#111827; --surface:#1f2937; --primary:#22d3ee; --positive:#10b981; --negative:#ef4444; --warning:#f59e0b; }
-        body { background: var(--bg); color: var(--text); }
-        .app-container { background: var(--header-bg); }
-        .filter-section, .upload-section { background: var(--card-bg); }
-        .stat-card { background: linear-gradient(135deg, var(--primary) 0%, var(--positive) 100%); color: white; }
-        .btn-primary { background: var(--primary); color: white; width: 100%; margin: 10px 0; }
-        .btn-primary:hover { filter: brightness(0.9); }
-        .btn-secondary { background: var(--surface); width: 100%; margin: 10px 0; }
-        .btn-secondary:hover { filter: brightness(0.95); }
-        .btn-danger { background: var(--negative); color: white; padding: 8px 15px; }
-        .btn-danger:hover { filter: brightness(0.9); }
-        .status-closed { background: rgba(34,197,94,0.15); color: var(--positive); padding: 5px 10px; border-radius: 4px; }
-        .status-open { background: rgba(245,158,11,0.15); color: var(--warning); padding: 5px 10px; border-radius: 4px; }
-        .pnl-positive { color: var(--positive); font-weight: bold; }
-        .pnl-negative { color: var(--negative); font-weight: bold; }
-        .close-btn { background: var(--negative); color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; }
-        .close-btn:hover { opacity: 0.9; }
-        table tbody tr:hover { background: var(--surface); }
-        .detail-item strong { color: var(--text); }
-        .detail-item span { color: var(--primary); }
-        .upload-area { border: 2px dashed var(--primary); background: var(--surface); }
-        .upload-area:hover { background: var(--card-bg); border-color: var(--primary); }
-    </style>
 </head>
 <body>
     <!-- LOGIN -->
@@ -146,7 +57,10 @@
                 <div class="user-section">
                     <p>Email: <strong id="userEmail"></strong></p>
                     <div style="margin: 8px 0;"></div>
-                    <button class="btn btn-secondary" onclick="handleLogout()" style="width: 150px; margin-top: 10px;">Sair</button>
+                    <div style="display:flex; gap:8px; justify-content:flex-end;">
+                        <button class="btn btn-secondary" onclick="toggleTheme()" style="width: 160px;">Alternar tema</button>
+                        <button class="btn btn-secondary" onclick="handleLogout()" style="width: 150px;">Sair</button>
+                    </div>
                 </div>
             </div>
 

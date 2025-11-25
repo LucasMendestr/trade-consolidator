@@ -40,6 +40,11 @@ function renderCharts() {
     const negative = cs.getPropertyValue('--negative').trim() || '#ef4444';
     const gridColor = cs.getPropertyValue('--grid').trim() || '#334155';
     const textColor = cs.getPropertyValue('--text').trim() || '#e5e7eb';
+    if (typeof Chart !== 'undefined') {
+        Chart.defaults.font.family = 'Inter, Arial, sans-serif';
+        Chart.defaults.color = textColor;
+        Chart.defaults.borderColor = gridColor;
+    }
     const elDailyCum = document.getElementById('chartDailyCumulative');
     const elDailyBar = document.getElementById('chartDailyBar');
     const elInst = document.getElementById('chartPnlInstrument');
