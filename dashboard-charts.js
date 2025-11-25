@@ -24,13 +24,13 @@ function updateDashboard() {
     var maxAbs = Math.max(Math.abs(maxGain || 0), Math.abs(maxLoss || 0)) || 1;
     var bestAbs = Math.max(Math.abs(bestDay || 0), Math.abs(worstDay || 0)) || 1;
     document.getElementById('statsGrid').innerHTML = 
-        '<div class="stat-card">' +
+        '<div class="stat-card col-span-6 card-primary">' +
             '<div class="card-title">PnL Total</div>' +
             '<div class="kpi-row">' +
                 '<div class="kpi" style="grid-column: span 3"><div class="label">Total</div><div class="value" style="color:' + pnlColor + '">$' + totalPnL.toFixed(2) + '</div></div>' +
             '</div>' +
         '</div>' +
-        '<div class="stat-card">' +
+        '<div class="stat-card col-span-3">' +
             '<div class="card-title">Ganho Médio / Perda Média</div>' +
             '<div class="kpi-row">' +
                 '<div class="kpi"><div class="label">Ganho</div><div class="value" style="color:var(--positive)">$' + (avgGain !== null ? avgGain.toFixed(2) : '-') + '</div></div>' +
@@ -39,7 +39,7 @@ function updateDashboard() {
             '</div>' +
             '<div class="meter"><div class="fill-green" style="width:' + (rrShare * 100).toFixed(0) + '%"></div><div class="fill-red" style="width:' + (100 - (rrShare * 100).toFixed(0)) + '%"></div></div>' +
         '</div>' +
-        '<div class="stat-card">' +
+        '<div class="stat-card col-span-3">' +
             '<div class="card-title">Maior Ganho / Maior Perda</div>' +
             '<div class="kpi-row">' +
                 '<div class="kpi"><div class="label">Maior Ganho</div><div class="value" style="color:var(--positive)">$' + (maxGain !== null ? maxGain.toFixed(2) : '-') + '</div></div>' +
@@ -48,7 +48,7 @@ function updateDashboard() {
             '</div>' +
             '<div class="meter"><div class="fill-green" style="width:' + ((Math.abs(maxGain || 0)/maxAbs)*100).toFixed(0) + '%"></div><div class="fill-red" style="width:' + (100 - ((Math.abs(maxGain || 0)/maxAbs)*100).toFixed(0)) + '%"></div></div>' +
         '</div>' +
-        '<div class="stat-card">' +
+        '<div class="stat-card col-span-6">' +
             '<div class="card-title">Win/Loss Streak</div>' +
             '<div class="kpi-row">' +
                 '<div class="kpi"><div class="label">W Streak</div><div class="value" style="color:var(--positive)">' + maxWinStreak + '</div></div>' +
@@ -57,7 +57,7 @@ function updateDashboard() {
             '</div>' +
             '<div class="meter"><div class="fill-green" style="width:' + ((maxWinStreak/Math.max(maxWinStreak + maxLossStreak,1))*100).toFixed(0) + '%"></div><div class="fill-red" style="width:' + ((maxLossStreak/Math.max(maxWinStreak + maxLossStreak,1))*100).toFixed(0) + '%"></div></div>' +
         '</div>' +
-        '<div class="stat-card">' +
+        '<div class="stat-card col-span-6">' +
             '<div class="card-title">Melhor/Pior Dia</div>' +
             '<div class="kpi-row">' +
                 '<div class="kpi"><div class="label">Melhor</div><div class="value" style="color:var(--positive)">' + (bestDay !== null ? ('$' + bestDay.toFixed(2)) : '-') + '</div></div>' +
@@ -66,7 +66,7 @@ function updateDashboard() {
             '</div>' +
             '<div class="meter"><div class="fill-green" style="width:' + ((Math.abs(bestDay||0)/bestAbs)*100).toFixed(0) + '%"></div><div class="fill-red" style="width:' + ((Math.abs(worstDay||0)/bestAbs)*100).toFixed(0) + '%"></div></div>' +
         '</div>' +
-        '<div class="stat-card">' +
+        '<div class="stat-card col-span-6">' +
             '<div class="card-title">Taxa de Acerto</div>' +
             '<div class="kpi-row">' +
                 '<div class="kpi"><div class="label">Trades</div><div class="value">' + totalTrades + '</div></div>' +
