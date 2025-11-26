@@ -461,7 +461,7 @@ function openDayModal(isoDate){ try {
     if (charts.dayModal) { charts.dayModal.destroy(); }
     var ctx = document.getElementById('dayModalChart').getContext('2d');
     var grad = ctx.createLinearGradient(0,0,0,120); grad.addColorStop(0,'rgba(34,197,94,0.15)'); grad.addColorStop(1,'rgba(34,197,94,0)');
-    charts.dayModal = new Chart(ctx, { type:'line', data:{ labels: trades.map(function(t){ var dt=new Date(t.endTime||t.startTime); return dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }), datasets:[{ data:pnlCurve, borderColor:'#22d3ee', backgroundColor:grad, tension:0.35, borderWidth:2 }] }, options:{ plugins:{ legend:{display:false} }, scales:{ x:{ grid:{ color:'rgba(148,163,184,0.2)' } }, y:{ grid:{ color:'rgba(148,163,184,0.2)' } } } } });
+    charts.dayModal = new Chart(ctx, { type:'line', data:{ labels: trades.map(function(t){ var dt=new Date(t.endTime||t.startTime); return dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }), datasets:[{ data:pnlCurve, borderColor:'#22d3ee', backgroundColor:grad, tension:0.35, borderWidth:2 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales:{ x:{ grid:{ color:'rgba(148,163,184,0.2)' } }, y:{ grid:{ color:'rgba(148,163,184,0.2)' } } } } });
     // Table
     var body = document.getElementById('dayModalTableBody'); var rows='';
     for (var i=0;i<trades.length;i++){
