@@ -284,11 +284,11 @@ function renderWeeklyCharts(){
 
 function renderWeekSummary(labels, counts, pnlByDay, closed){
     const el = document.getElementById('weekSummaryTable'); if (!el) return;
-    const vols = [0,0,0,0,0,0,0]; const wins=[0,0,0,0,0,0,0]; const trades=[0,0,0,0,0,0,0]; let totalProfit=[0,0,0,0,0,0,0], totalLoss=[0,0,0,0,0,0,0];
-    for (let i=0;i<closed.length;i++){ const t=closed[i]; const d=new Date(t.endTime||t.startTime); if(isNaN(d)) continue; const idx=d.getDay(); const pnl=parseFloat(t.pnlDollars||0); trades[idx]++; vols[idx]+=parseFloat(t.volume||0)||0; if(pnl>0){ wins[idx]++; totalProfit[idx]+=pnl; } else if(pnl<0){ totalLoss[idx]+=Math.abs(pnl); } }
+    const wins=[0,0,0,0,0,0,0]; const trades=[0,0,0,0,0,0,0]; let totalProfit=[0,0,0,0,0,0,0], totalLoss=[0,0,0,0,0,0,0];
+    for (let i=0;i<closed.length;i++){ const t=closed[i]; const d=new Date(t.endTime||t.startTime); if(isNaN(d)) continue; const idx=d.getDay(); const pnl=parseFloat(t.pnlDollars||0); trades[idx]++; if(pnl>0){ wins[idx]++; totalProfit[idx]+=pnl; } else if(pnl<0){ totalLoss[idx]+=Math.abs(pnl); } }
     function fmtCurrency(v){ if(!v&&v!==0) return '-'; return (v>=0?'+':'-') + '$' + Math.abs(v).toFixed(2); }
     el.innerHTML = '<div class="group-title" style="margin-bottom:8px;">Resumo por Dia da Semana</div>' +
-      '<table><thead><tr><th>Dia</th><th>Net Profit</th><th>Winning %</th><th>Total Profits</th><th>Total Loss</th><th>Trades</th><th>Volume</th></tr></thead><tbody>' +
+      '<table><thead><tr><th>Dia</th><th>Net Profit</th><th>Winning %</th><th>Total Profits</th><th>Total Loss</th><th>Trades</th><th>Quantidade de Trades</th></tr></thead><tbody>' +
       labels.map(function(lbl, i){ const net=pnlByDay[i]; const total=trades[i]||0; const winPct=total? (wins[i]/total)*100 : 0; return '<tr>'+
         '<td>'+lbl+'</td>'+
         '<td class="'+(net>=0?'pos':'neg')+'">'+fmtCurrency(net)+'</td>'+
@@ -296,6 +296,6 @@ function renderWeekSummary(labels, counts, pnlByDay, closed){
         '<td class="pos">'+fmtCurrency(totalProfit[i]||0)+'</td>'+
         '<td class="neg">'+fmtCurrency(-(totalLoss[i]||0))+'</td>'+
         '<td>'+ (trades[i]||0) +'</td>'+
-        '<td>'+ ((vols[i]||0).toFixed ? (vols[i]||0).toFixed(1) : '-') +'</td>'+
+        '<td>'+ (trades[i]||0) +'</td>'+
       '</tr>'; }).join('') + '</tbody></table>';
 }
