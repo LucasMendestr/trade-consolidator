@@ -288,14 +288,13 @@ function renderWeekSummary(labels, counts, pnlByDay, closed){
     for (let i=0;i<closed.length;i++){ const t=closed[i]; const d=new Date(t.endTime||t.startTime); if(isNaN(d)) continue; const idx=d.getDay(); const pnl=parseFloat(t.pnlDollars||0); trades[idx]++; if(pnl>0){ wins[idx]++; totalProfit[idx]+=pnl; } else if(pnl<0){ totalLoss[idx]+=Math.abs(pnl); } }
     function fmtCurrency(v){ if(!v&&v!==0) return '-'; return (v>=0?'+':'-') + '$' + Math.abs(v).toFixed(2); }
     el.innerHTML = '<div class="group-title" style="margin-bottom:8px;">Resumo por Dia da Semana</div>' +
-      '<table><thead><tr><th>Dia</th><th>Net Profit</th><th>Winning %</th><th>Total Profits</th><th>Total Loss</th><th>Trades</th><th>Quantidade de Trades</th></tr></thead><tbody>' +
-      labels.map(function(lbl, i){ const net=pnlByDay[i]; const total=trades[i]||0; const winPct=total? (wins[i]/total)*100 : 0; return '<tr>'+
+      '<table><thead><tr><th>Dia</th><th>Net Profit</th><th>Winning %</th><th>Total Profits</th><th>Total Loss</th><th>Trades</th></tr></thead><tbody>' +
+      labels.map(function(lbl, i){ const net=pnlByDay[i]; const total=trades[i]||0; const winPct=total? (wins[i]/total)*100 : 0; const lossPct=100 - winPct; return '<tr>'+
         '<td>'+lbl+'</td>'+
         '<td class="'+(net>=0?'pos':'neg')+'">'+fmtCurrency(net)+'</td>'+
-        '<td><div class="winbar"><div class="winfill" style="width:'+winPct.toFixed(0)+'%"></div></div></td>'+
+        '<td><div class="winbar"><div class="winfill" style="width:'+winPct.toFixed(0)+'%"></div><div class="lossfill" style="width:'+lossPct.toFixed(0)+'%"></div></div></td>'+
         '<td class="pos">'+fmtCurrency(totalProfit[i]||0)+'</td>'+
         '<td class="neg">'+fmtCurrency(-(totalLoss[i]||0))+'</td>'+
-        '<td>'+ (trades[i]||0) +'</td>'+
         '<td>'+ (trades[i]||0) +'</td>'+
       '</tr>'; }).join('') + '</tbody></table>';
 }
