@@ -286,9 +286,9 @@ body.sidebar-collapsed { --sidebar-w: 64px; }
 /* Day detail modal */
 .day-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; z-index: 1000; }
 .day-modal { position: fixed; inset: 5% 5%; background: var(--card-bg); border: 1px solid var(--grid); border-radius: 12px; box-shadow: var(--shadow); display: none; z-index: 1001; }
-.day-modal.open { display: flex; flex-direction: column; }
+.day-modal.open { display: grid; grid-template-rows: auto 1fr; }
 .day-modal-backdrop.open { display: block; }
-.day-header { position: sticky; top: 0; background: var(--card-bg); border-bottom: 1px solid var(--grid); padding: 12px; z-index: 2; overflow: hidden; height: 220px; }
+.day-header { position: sticky; top: 0; background: var(--card-bg); border-bottom: 1px solid var(--grid); padding: 12px; z-index: 3; overflow: hidden; }
 .day-content { flex: 1 1 auto; overflow-y: auto; padding-top: 4px; }
 .day-header-top { display:flex; justify-content: space-between; align-items: center; }
 .day-title { font-weight: 700; font-size: 14px; }
