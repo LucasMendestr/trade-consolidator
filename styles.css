@@ -128,6 +128,18 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .winbar { height: 14px; background: var(--surface); border: 1px solid var(--grid); border-radius: 999px; overflow: hidden; display: flex; }
 .winbar .winfill { height: 100%; background: var(--positive); }
 .winbar .lossfill { height: 100%; background: var(--negative); }
+
+/* Datepicker (Flatpickr) dark theme */
+.flatpickr-calendar { background: var(--card-bg); border: 1px solid var(--grid); box-shadow: var(--shadow); }
+.flatpickr-months .flatpickr-month, .flatpickr-weekdays { color: var(--text); }
+.flatpickr-current-month .cur-year, .flatpickr-current-month .flatpickr-monthDropdown-months { color: var(--text); }
+.flatpickr-day { color: var(--text); border-radius: 6px; }
+.flatpickr-day:hover { background: rgba(34,211,238,0.10); }
+.flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange { background: var(--accent); border-color: var(--accent); color: #0b1020; }
+.flatpickr-day.inRange { background: rgba(34,211,238,0.08); }
+.flatpickr-day.disabled, .flatpickr-day.notAllowed { color: #475569; }
+.flatpickr-prev-month svg, .flatpickr-next-month svg { fill: var(--text); }
+.flatpickr-prev-month:hover svg, .flatpickr-next-month:hover svg { fill: var(--accent); }
 .donut-chart { width: 200px; height: 200px; display: block; margin: 8px auto; }
 .card-winrate { max-height: 400px; }
 .card-winrate .kpi-row { margin-bottom: 8px; }
