@@ -176,6 +176,7 @@ function renderCharts() {
     charts.winRate = new Chart(elWinRate.getContext('2d'), { type: 'line', data: { labels: wrLabels, datasets: [{ label: 'Win Rate Acumulado (%)', data: wrData, borderColor: positive, backgroundColor: gWr, tension: 0.35, borderWidth: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: true, padding: 8 } }, scales: { x: { grid: { color: 'rgba(148,163,184,0.2)' }, ticks: { color: textColor } }, y: { grid: { color: 'rgba(148,163,184,0.2)' }, ticks: { color: textColor } } } } });
 
     renderWeeklyCharts();
+    renderStrategySections();
 }
 
 function renderMiniCards() {
@@ -297,4 +298,66 @@ function renderWeekSummary(labels, counts, pnlByDay, closed){
         '<td class="neg">'+fmtCurrency(-(totalLoss[i]||0))+'</td>'+
         '<td>'+ (trades[i]||0) +'</td>'+
       '</tr>'; }).join('') + '</tbody></table>';
+}
+function renderStrategySections(){
+    const cs = getComputedStyle(document.body);
+    const accent = cs.getPropertyValue('--accent').trim() || '#22d3ee';
+    const positive = cs.getPropertyValue('--positive').trim() || '#10b981';
+    const negative = cs.getPropertyValue('--negative').trim() || '#ef4444';
+    const gridColor = cs.getPropertyValue('--grid').trim() || '#334155';
+    const textColor = cs.getPropertyValue('--text').trim() || '#e5e7eb';
+    const closed = []; for (let i=0;i<filteredTrades.length;i++){ const t=filteredTrades[i]; if (t.status === 'Closed') closed.push(t); }
+    const stratMapCounts = {}; const stratMapPnl = {}; const stratWins = {}; const stratTrades = {}; let minDate=null, maxDate=null;
+    for (let i=0;i<closed.length;i++){
+        const t = closed[i];
+        const name = (t['estratégia'] || t.estrategia || t.strategy || 'Sem estratégia') || 'Sem estratégia';
+        const pnl = parseFloat(t.pnlDollars || 0) || 0;
+        stratMapCounts[name] = (stratMapCounts[name] || 0) + 1;
+        stratMapPnl[name] = (stratMapPnl[name] || 0) + pnl;
+        stratTrades[name] = (stratTrades[name] || 0) + 1;
+        if (pnl > 0) stratWins[name] = (stratWins[name] || 0) + 1;
+        const d = new Date(t.endTime || t.startTime); const ts = d.getTime(); if(!isNaN(ts)){ if(minDate===null||ts<minDate) minDate=ts; if(maxDate===null||ts>maxDate) maxDate=ts; }
+    }
+    const strategies = Object.keys(stratMapCounts);
+    const counts = strategies.map(function(k){ return stratMapCounts[k]; });
+    const pnls = strategies.map(function(k){ return stratMapPnl[k]; });
+    const colors = pnls.map(function(v){ return v>=0?positive:negative; });
+    const rangeText = (minDate && maxDate) ? (new Date(minDate).toLocaleDateString('pt-BR') + ' — ' + new Date(maxDate).toLocaleDateString('pt-BR')) : '';
+    const sr1 = document.getElementById('strategyRange1'); const sr2 = document.getElementById('strategyRange2'); if(sr1) sr1.textContent = rangeText; if(sr2) sr2.textContent = rangeText;
+    const elDist = document.getElementById('chartTradesByStrategy'); const elPerf = document.getElementById('chartPnlByStrategy');
+    if (elDist) {
+        if (charts.tradesByStrategy) charts.tradesByStrategy.destroy();
+        charts.tradesByStrategy = new Chart(elDist.getContext('2d'), { type: 'bar', data: { labels: strategies, datasets: [{ label: 'Trades', data: counts, backgroundColor: accent, borderColor: '#ffffff22', borderWidth: 1 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: true, padding: 8 } }, scales: { x: { grid: { color: 'rgba(148,163,184,0.2)' }, ticks: { color: textColor } }, y: { grid: { color: 'rgba(148,163,184,0.1)' }, ticks: { color: textColor } } } } });
+    }
+    if (elPerf) {
+        if (charts.pnlByStrategy) charts.pnlByStrategy.destroy();
+        charts.pnlByStrategy = new Chart(elPerf.getContext('2d'), { type: 'bar', data: { labels: strategies, datasets: [{ label: 'PnL', data: pnls, backgroundColor: colors, borderColor: '#ffffff22', borderWidth: 1 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: true, padding: 8 } }, scales: { x: { grid: { color: 'rgba(148,163,184,0.2)' }, ticks: { color: textColor } }, y: { grid: { color: 'rgba(148,163,184,0.1)' }, ticks: { color: textColor } } } } });
+    }
+    renderStrategySummary(strategies, stratMapCounts, stratWins, stratMapPnl, closed);
+}
+
+function renderStrategySummary(labels, countsMap, winsMap, pnlMap, closed){
+    const el = document.getElementById('strategySummaryTable'); if(!el) return;
+    function fmtCurrency(v){ if(v===undefined||v===null) return '-'; return (v>=0?'+':'-') + '$' + Math.abs(v).toFixed(2); }
+    const rows = labels.map(function(name){
+        const totalTrades = countsMap[name]||0;
+        const wins = winsMap[name]||0;
+        const winPct = totalTrades ? (wins/totalTrades)*100 : 0;
+        const net = pnlMap[name]||0;
+        let totalProfit = 0, totalLoss = 0;
+        for (let i=0;i<closed.length;i++){
+            const t=closed[i]; const n=(t['estratégia']||t.estrategia||t.strategy||'Sem estratégia')||'Sem estratégia'; if(n!==name) continue; const pnl=parseFloat(t.pnlDollars||0); if(pnl>0) totalProfit+=pnl; else if(pnl<0) totalLoss+=Math.abs(pnl);
+        }
+        const lossPct = 100 - winPct;
+        return '<tr>'+
+          '<td>'+name+'</td>'+
+          '<td class="'+(net>=0?'pos':'neg')+'">'+fmtCurrency(net)+'</td>'+
+          '<td><div class="winbar"><div class="winfill" style="width:'+winPct.toFixed(0)+'%"></div><div class="lossfill" style="width:'+lossPct.toFixed(0)+'%"></div></div></td>'+
+          '<td class="pos">'+fmtCurrency(totalProfit)+'</td>'+
+          '<td class="neg">'+fmtCurrency(-totalLoss)+'</td>'+
+          '<td>'+ totalTrades +'</td>'+
+        '</tr>';
+    }).join('');
+    el.innerHTML = '<div class="group-title" style="margin-bottom:8px;">Resumo por Estratégia</div>'+
+      '<table><thead><tr><th>Estratégia</th><th>Net Profit</th><th>Winning %</th><th>Total Profits</th><th>Total Loss</th><th>Trades</th></tr></thead><tbody>'+rows+'</tbody></table>';
 }
