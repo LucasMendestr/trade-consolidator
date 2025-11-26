@@ -289,7 +289,7 @@ body.sidebar-collapsed { --sidebar-w: 64px; }
 .day-modal.open { display: grid; grid-template-rows: auto 1fr; }
 .day-modal-backdrop.open { display: block; }
 .day-header { position: sticky; top: 0; background: var(--card-bg); border-bottom: 1px solid var(--grid); padding: 12px; z-index: 3; overflow: hidden; }
-.day-content { flex: 1 1 auto; overflow-y: auto; padding-top: 4px; }
+.day-content { flex: 1 1 auto; overflow-y: auto; padding-top: 16px; background: var(--card-bg); }
 .day-header-top { display:flex; justify-content: space-between; align-items: center; }
 .day-title { font-weight: 700; font-size: 14px; }
 .day-net { font-weight: 700; }
@@ -306,6 +306,7 @@ body.sidebar-collapsed { --sidebar-w: 64px; }
 .day-table th, .day-table td { padding: 10px; border-bottom: 1px solid var(--grid); font-size: 13px; }
 .day-table th { text-align: left; color: var(--text); font-weight: 700; position: sticky; top: 0; background: var(--card-bg); z-index: 1; }
 .day-table tr:nth-child(even) { background: var(--surface); }
+.day-table tr:nth-child(odd) { background: var(--card-bg); }
 .day-table tr:hover { background: rgba(148,163,184,0.10); }
 .day-table { table-layout: fixed; }
 .day-table th, .day-table td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
