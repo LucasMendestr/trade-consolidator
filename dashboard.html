@@ -124,6 +124,37 @@
             </div>
             <div class="calendar-grid" id="calendarGrid"></div>
         </div>
+        <div id="dayModalBackdrop" class="day-modal-backdrop"></div>
+        <div id="dayModal" class="day-modal">
+            <div class="day-header">
+                <div class="day-header-top">
+                    <div class="day-title" id="dayModalTitle"></div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <div class="day-net" id="dayModalNet"></div>
+                        <button class="day-close" onclick="closeDayModal()">✕</button>
+                    </div>
+                </div>
+                <div class="day-summary" id="dayModalSummary"></div>
+                <canvas id="dayModalChart" class="day-chart"></canvas>
+            </div>
+            <div class="day-content">
+                <table class="day-table">
+                    <thead>
+                        <tr>
+                            <th>Open time</th>
+                            <th>Ticker</th>
+                            <th>Side</th>
+                            <th>Instrument</th>
+                            <th style="text-align:right;">Net P&L</th>
+                            <th>Close time</th>
+                            <th>Duration</th>
+                            <th>Estratégia</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dayModalTableBody"></tbody>
+                </table>
+            </div>
+        </div>
         </div>
         </main>
     </div>

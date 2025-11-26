@@ -412,7 +412,7 @@ function renderCalendar(month, year){
                 const cls = rec ? (rec.pnl>=0 ? 'cal-pos' : 'cal-neg') : 'cal-neutral';
                 const pnlText = rec ? ((rec.pnl>=0?'+':'-') + '$' + Math.abs(rec.pnl).toFixed(0)) : '';
                 const cntText = rec ? (rec.count + (rec.count===1?' trade':' trades')) : '';
-                cellsHtml += '<div class="calendar-cell '+cls+'"><div class="date">'+day+'</div><div class="line">'+pnlText+'</div><div class="line">'+cntText+'</div></div>';
+                cellsHtml += '<div class="calendar-cell '+cls+'" onclick="openDayModal(\''+k+'\')"><div class="date">'+day+'</div><div class="line">'+pnlText+'</div><div class="line">'+cntText+'</div></div>';
                 day++;
             }
         }
@@ -431,3 +431,58 @@ function renderCalendar(month, year){
     }
     grid.innerHTML = cellsHtml;
 }
+
+function openDayModal(isoDate){ try {
+    var b = document.getElementById('dayModalBackdrop'); var m = document.getElementById('dayModal'); if (!b || !m) return;
+    b.classList.add('open'); m.classList.add('open');
+    var d = new Date(isoDate); var dateLabel = d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'2-digit', year:'numeric' });
+    document.getElementById('dayModalTitle').textContent = dateLabel;
+    // Collect trades for the day
+    var trades = []; for (var i=0;i<filteredTrades.length;i++){ var t=filteredTrades[i]; var dt=new Date(t.endTime || t.startTime); if(isNaN(dt)) continue; var key=dt.toISOString().slice(0,10); if(key===isoDate) trades.push(t); }
+    // Metrics
+    var total=trades.length, wins=0, losses=0, gross=0, fees=0, vol=0; var pnlCurve=[];
+    trades.sort(function(a,b){ return new Date(a.endTime||a.startTime) - new Date(b.endTime||b.startTime); });
+    var run=0; for (var i=0;i<trades.length;i++){ var p=parseFloat(trades[i].pnlDollars||0)||0; run+=p; pnlCurve.push(run); gross+=p; if(p>0) wins++; else if(p<0) losses++; var f=parseFloat(trades[i].fees||trades[i].commission||0)||0; fees+=f; vol+=parseFloat(trades[i].volume||0)||0; }
+    var winrate = total? (wins/total)*100 : 0; var pf = (losses>0? ( (gross>0?gross:0) / Math.abs(trades.filter(function(t){ return parseFloat(t.pnlDollars||0)<0; }).reduce(function(a,t){ return a + Math.abs(parseFloat(t.pnlDollars||0)||0); },0)) ) : null);
+    var netText = (gross>=0?'+':'-') + '$' + Math.abs(gross).toFixed(0); var netColor = gross>=0?'var(--positive)':'var(--negative)';
+    var netEl = document.getElementById('dayModalNet'); netEl.textContent = 'Net P&L ' + netText; netEl.style.color = netColor;
+    // Summary cards
+    var sumEl = document.getElementById('dayModalSummary'); sumEl.innerHTML = ''+
+        card('Total trades', String(total))+
+        card('Winners', String(wins))+
+        card('Gross P&L', (gross>=0?'+':'-')+'$'+Math.abs(gross).toFixed(2))+
+        card('Commissions', '$'+fees.toFixed(2))+
+        card('Winrate', winrate.toFixed(0)+'%')+
+        card('Losers', String(losses))+
+        card('Volume', vol.toFixed(1))+
+        card('Profit factor', pf!==null?pf.toFixed(2):'-');
+    function card(label, value){ return '<div class="day-card"><div class="label">'+label+'</div><div class="value">'+value+'</div></div>'; }
+    // Small area chart
+    if (charts.dayModal) { charts.dayModal.destroy(); }
+    var ctx = document.getElementById('dayModalChart').getContext('2d');
+    var grad = ctx.createLinearGradient(0,0,0,120); grad.addColorStop(0,'rgba(34,197,94,0.15)'); grad.addColorStop(1,'rgba(34,197,94,0)');
+    charts.dayModal = new Chart(ctx, { type:'line', data:{ labels: trades.map(function(t){ var dt=new Date(t.endTime||t.startTime); return dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }), datasets:[{ data:pnlCurve, borderColor:'#22d3ee', backgroundColor:grad, tension:0.35, borderWidth:2 }] }, options:{ plugins:{ legend:{display:false} }, scales:{ x:{ grid:{ color:'rgba(148,163,184,0.2)' } }, y:{ grid:{ color:'rgba(148,163,184,0.2)' } } } } });
+    // Table
+    var body = document.getElementById('dayModalTableBody'); var rows='';
+    for (var i=0;i<trades.length;i++){
+        var t=trades[i]; var open=new Date(t.startTime||t.entryTime); var close=new Date(t.endTime||t.exitTime);
+        var durMs = (!isNaN(open)&&!isNaN(close)) ? (close - open) : 0;
+        function fmtHMS(ms){ var s=Math.floor(ms/1000); var h=Math.floor(s/3600); var m=Math.floor((s%3600)/60); var sec=s%60; return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0'); }
+        var side=(t.side||t.direction||'').toUpperCase(); var sideBadge= side==='SHORT'? '<span class="badge-short">SHORT</span>' : '<span class="badge-long">LONG</span>';
+        var instr=t.instrument||t.symbol||'-'; var pnl=parseFloat(t.pnlDollars||0)||0; var pnlCls= pnl>=0?'pos':'neg';
+        var strat=t['estratégia']||t.estrategia||t.strategy||'-';
+        rows += '<tr>'+
+            '<td>'+ (isNaN(open)?'-':open.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})) +'</td>'+
+            '<td>'+ (t.symbol||t.ticker||instr) +'</td>'+
+            '<td>'+ sideBadge +'</td>'+
+            '<td>'+ instr +'</td>'+
+            '<td style="text-align:right;" class="'+(pnl>=0?'pos':'neg')+'">'+ ((pnl>=0?'+':'-')+'$'+Math.abs(pnl).toFixed(2)) +'</td>'+
+            '<td>'+ (isNaN(close)?'-':close.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})) +'</td>'+
+            '<td>'+ fmtHMS(durMs) +'</td>'+
+            '<td>'+ strat +'</td>'+
+        '</tr>';
+    }
+    body.innerHTML = rows || '<tr><td colspan="8" style="text-align:center; padding:20px; color:#94a3b8;">Sem trades neste dia</td></tr>';
+} catch(e){}
+}
+function closeDayModal(){ var b=document.getElementById('dayModalBackdrop'); var m=document.getElementById('dayModal'); if(b) b.classList.remove('open'); if(m) m.classList.remove('open'); if (charts.dayModal) { charts.dayModal.destroy(); charts.dayModal=null; } }
