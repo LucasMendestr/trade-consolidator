@@ -174,6 +174,8 @@ function renderCharts() {
     gWr.addColorStop(0, 'rgba(16,185,129,0.10)');
     gWr.addColorStop(1, 'rgba(16,185,129,0.00)');
     charts.winRate = new Chart(elWinRate.getContext('2d'), { type: 'line', data: { labels: wrLabels, datasets: [{ label: 'Win Rate Acumulado (%)', data: wrData, borderColor: positive, backgroundColor: gWr, tension: 0.35, borderWidth: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: true, padding: 8 } }, scales: { x: { grid: { color: 'rgba(148,163,184,0.2)' }, ticks: { color: textColor } }, y: { grid: { color: 'rgba(148,163,184,0.2)' }, ticks: { color: textColor } } } } });
+
+    renderWeeklyCharts();
 }
 
 function renderMiniCards() {
@@ -250,4 +252,50 @@ function renderStatisticsTable(m) {
           '<div class="stats-name">Trade Expectancy</div><div class="stats-value">' + fmtCurrency(m.expectancy) + '</div>' +
         '</div>' +
       '</div>';
+}
+function renderWeeklyCharts(){
+    const cs = getComputedStyle(document.body);
+    const accent = cs.getPropertyValue('--accent').trim() || '#22d3ee';
+    const positive = cs.getPropertyValue('--positive').trim() || '#10b981';
+    const negative = cs.getPropertyValue('--negative').trim() || '#ef4444';
+    const gridColor = cs.getPropertyValue('--grid').trim() || '#334155';
+    const textColor = cs.getPropertyValue('--text').trim() || '#e5e7eb';
+    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const labelsPt = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+    const counts = [0,0,0,0,0,0,0];
+    const pnlByDay = [0,0,0,0,0,0,0];
+    const closed = []; for (let i=0;i<filteredTrades.length;i++){ const t=filteredTrades[i]; if (t.status === 'Closed') closed.push(t); }
+    let minDate=null, maxDate=null;
+    for (let i=0;i<closed.length;i++){
+        const t = closed[i]; const d = new Date(t.endTime || t.startTime); if (isNaN(d)) continue; const idx = d.getDay(); counts[idx]++; pnlByDay[idx] += parseFloat(t.pnlDollars || 0);
+        const iso = d.getTime(); if(minDate===null||iso<minDate) minDate=iso; if(maxDate===null||iso>maxDate) maxDate=iso;
+    }
+    const rangeText = (minDate && maxDate) ? (new Date(minDate).toLocaleDateString('pt-BR') + ' — ' + new Date(maxDate).toLocaleDateString('pt-BR')) : '';
+    const r1 = document.getElementById('weekRange1'); const r2 = document.getElementById('weekRange2'); if (r1) r1.textContent = rangeText; if (r2) r2.textContent = rangeText;
+    const elDist = document.getElementById('chartTradesByWeekday'); const elPerf = document.getElementById('chartPnlByWeekday');
+    if (charts.tradesByWeekday) charts.tradesByWeekday.destroy();
+    charts.tradesByWeekday = new Chart(elDist.getContext('2d'), { type: 'bar', data: { labels: labelsPt, datasets: [{ label: 'Trades', data: counts, backgroundColor: accent, borderColor: '#ffffff22', borderWidth: 1 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: true, padding: 8 } }, scales: { x: { grid: { color: 'rgba(148,163,184,0.2)' }, ticks: { color: textColor } }, y: { grid: { color: 'rgba(148,163,184,0.1)' }, ticks: { color: textColor } } } } });
+    if (charts.pnlByWeekday) charts.pnlByWeekday.destroy();
+    const colors = pnlByDay.map(function(v){ return v>=0?positive:negative; });
+    charts.pnlByWeekday = new Chart(elPerf.getContext('2d'), { type: 'bar', data: { labels: labelsPt, datasets: [{ label: 'PnL', data: pnlByDay, backgroundColor: colors, borderColor: '#ffffff22', borderWidth: 1 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: true, padding: 8 } }, scales: { x: { grid: { color: 'rgba(148,163,184,0.2)' }, ticks: { color: textColor } }, y: { grid: { color: 'rgba(148,163,184,0.1)' }, ticks: { color: textColor } } } } });
+
+    renderWeekSummary(labelsPt, counts, pnlByDay, closed);
+}
+
+function renderWeekSummary(labels, counts, pnlByDay, closed){
+    const el = document.getElementById('weekSummaryTable'); if (!el) return;
+    const vols = [0,0,0,0,0,0,0]; const wins=[0,0,0,0,0,0,0]; const trades=[0,0,0,0,0,0,0]; let totalProfit=[0,0,0,0,0,0,0], totalLoss=[0,0,0,0,0,0,0];
+    for (let i=0;i<closed.length;i++){ const t=closed[i]; const d=new Date(t.endTime||t.startTime); if(isNaN(d)) continue; const idx=d.getDay(); const pnl=parseFloat(t.pnlDollars||0); trades[idx]++; vols[idx]+=parseFloat(t.volume||0)||0; if(pnl>0){ wins[idx]++; totalProfit[idx]+=pnl; } else if(pnl<0){ totalLoss[idx]+=Math.abs(pnl); } }
+    function fmtCurrency(v){ if(!v&&v!==0) return '-'; return (v>=0?'+':'-') + '$' + Math.abs(v).toFixed(2); }
+    el.innerHTML = '<div class="group-title" style="margin-bottom:8px;">Resumo por Dia da Semana</div>' +
+      '<table><thead><tr><th>Dia</th><th>Net Profit</th><th>Winning %</th><th>Total Profits</th><th>Total Loss</th><th>Trades</th><th>Volume</th></tr></thead><tbody>' +
+      labels.map(function(lbl, i){ const net=pnlByDay[i]; const total=trades[i]||0; const winPct=total? (wins[i]/total)*100 : 0; return '<tr>'+
+        '<td>'+lbl+'</td>'+
+        '<td class="'+(net>=0?'pos':'neg')+'">'+fmtCurrency(net)+'</td>'+
+        '<td><div class="winbar"><div class="winfill" style="width:'+winPct.toFixed(0)+'%"></div></div></td>'+
+        '<td class="pos">'+fmtCurrency(totalProfit[i]||0)+'</td>'+
+        '<td class="neg">'+fmtCurrency(-(totalLoss[i]||0))+'</td>'+
+        '<td>'+ (trades[i]||0) +'</td>'+
+        '<td>'+ ((vols[i]||0).toFixed ? (vols[i]||0).toFixed(1) : '-') +'</td>'+
+      '</tr>'; }).join('') + '</tbody></table>';
 }

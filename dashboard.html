@@ -92,6 +92,17 @@
             <div class="chart-card"><strong>Win Rate Acumulado</strong><canvas id="chartWinRateCumulative" class="chart-canvas"></canvas></div>
             <div class="chart-card"><strong>PnL Diário</strong><canvas id="chartDailyBar" class="chart-canvas"></canvas></div>
         </div>
+        <div class="weekly-grid">
+            <div class="weekly-card">
+                <div class="card-head"><strong>Distribuição de Trades por Dia da Semana</strong><span class="range" id="weekRange1"></span></div>
+                <canvas id="chartTradesByWeekday" class="weekly-canvas"></canvas>
+            </div>
+            <div class="weekly-card">
+                <div class="card-head"><strong>Performance por Dia da Semana</strong><span class="range" id="weekRange2"></span></div>
+                <canvas id="chartPnlByWeekday" class="weekly-canvas"></canvas>
+            </div>
+        </div>
+        <div class="week-summary" id="weekSummaryTable"></div>
         </div>
         </main>
     </div>
