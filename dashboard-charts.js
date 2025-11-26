@@ -76,6 +76,27 @@ function updateDashboard() {
             '<canvas id="miniHitGauge" class="donut-chart"></canvas>' +
         '</div>';
     renderMiniCards();
+
+    renderStatisticsTable({
+        totalPnL: totalPnL,
+        totalTrades: totalTrades,
+        wins: wins,
+        losses: losses,
+        breakEven: (function(){ let c=0; for (let i=0;i<filteredTrades.length;i++){ const p=parseFloat(filteredTrades[i].pnlDollars||0); if (p===0) c++; } return c; })(),
+        avgGain: avgGain,
+        avgLoss: avgLoss,
+        profitFactor: profitFactor,
+        payoffFactor: payoffFactor,
+        maxWinStreak: maxWinStreak,
+        maxLossStreak: maxLossStreak,
+        maxGain: maxGain,
+        maxLoss: maxLoss,
+        bestDay: bestDay,
+        worstDay: worstDay,
+        avgPerTrade: avgPerTrade,
+        avgPerDay: avgPerDay,
+        tradingDays: (function(){ const set=new Set(); for (let i=0;i<filteredTrades.length;i++){ const d=new Date(filteredTrades[i].endTime||filteredTrades[i].startTime); if(!isNaN(d)) set.add(d.toISOString().slice(0,10)); } return set.size; })()
+    });
 }
 
 function renderCharts() {
@@ -143,4 +164,56 @@ function renderMiniCards() {
         if (charts.miniGauge) charts.miniGauge.destroy();
         charts.miniGauge = new Chart(gaugeEl.getContext('2d'), { type: 'doughnut', data: { labels: ['Win','Loss'], datasets: [{ data: [hit, 100-hit], backgroundColor: [positive, negative] }] }, options: { plugins: { legend: { display: false } }, cutout: '70%', circumference: 270, rotation: 225 } });
     }
+}
+function renderStatisticsTable(m) {
+    function fmtCurrency(v){ if (v===null||v===undefined||isNaN(v)) return '-'; const s = (v>=0?'+':'-') + '$' + Math.abs(v).toFixed(2); return s; }
+    function fmtNumber(v){ if (v===null||v===undefined||isNaN(v)) return '-'; return String(v); }
+    const el = document.getElementById('statisticsTable'); if (!el) return;
+    el.innerHTML =
+      '<div class="stats-group" title="Performance metrics">' +
+        '<div class="group-title">Performance</div>' +
+        '<div class="stats-list">' +
+          '<div class="stats-name">Total P&L</div><div class="stats-value" style="color:' + (m.totalPnL>=0?'var(--positive)':'var(--negative)') + '">' + fmtCurrency(m.totalPnL) + '</div>' +
+          '<div class="stats-name">Profit Factor</div><div class="stats-value">' + (m.profitFactor!==null?m.profitFactor.toFixed(2):'-') + '</div>' +
+          '<div class="stats-name">Payoff Factor</div><div class="stats-value">' + (m.payoffFactor!==null?m.payoffFactor.toFixed(2):'-') + '</div>' +
+          '<div class="stats-name">Avg PnL / Trade</div><div class="stats-value">' + fmtCurrency(m.avgPerTrade) + '</div>' +
+          '<div class="stats-name">Avg PnL / Day</div><div class="stats-value">' + fmtCurrency(m.avgPerDay) + '</div>' +
+          '<div class="stats-name">Trading Days</div><div class="stats-value">' + fmtNumber(m.tradingDays) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="stats-group" title="Distribution and streaks">' +
+        '<div class="group-title">Distribution</div>' +
+        '<div class="stats-list">' +
+          '<div class="stats-name">Total Trades</div><div class="stats-value">' + fmtNumber(m.totalTrades) + '</div>' +
+          '<div class="stats-name">Winning Trades</div><div class="stats-value" style="color:var(--positive)">' + fmtNumber(m.wins) + '</div>' +
+          '<div class="stats-name">Losing Trades</div><div class="stats-value" style="color:var(--negative)">' + fmtNumber(m.losses) + '</div>' +
+          '<div class="stats-name">Break Even Trades</div><div class="stats-value">' + fmtNumber(m.breakEven) + '</div>' +
+          '<div class="stats-name">Avg Winning Trade</div><div class="stats-value" style="color:var(--positive)">' + fmtCurrency(m.avgGain) + '</div>' +
+          '<div class="stats-name">Avg Losing Trade</div><div class="stats-value" style="color:var(--negative)">' + fmtCurrency(m.avgLoss) + '</div>' +
+          '<div class="stats-name">Max Consecutive Wins</div><div class="stats-value" style="color:var(--positive)">' + fmtNumber(m.maxWinStreak) + '</div>' +
+          '<div class="stats-name">Max Consecutive Losses</div><div class="stats-value" style="color:var(--negative)">' + fmtNumber(m.maxLossStreak) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="stats-group" title="Extremes and fees">' +
+        '<div class="group-title">Extremes & Fees</div>' +
+        '<div class="stats-list">' +
+          '<div class="stats-name">Largest Profit</div><div class="stats-value" style="color:var(--positive)">' + fmtCurrency(m.maxGain) + '</div>' +
+          '<div class="stats-name">Largest Loss</div><div class="stats-value" style="color:var(--negative)">' + fmtCurrency(m.maxLoss) + '</div>' +
+          '<div class="stats-name">Best Day</div><div class="stats-value" style="color:var(--positive)">' + fmtCurrency(m.bestDay) + '</div>' +
+          '<div class="stats-name">Worst Day</div><div class="stats-value" style="color:var(--negative)">' + fmtCurrency(m.worstDay) + '</div>' +
+          '<div class="stats-name">Total Commissions/Fees/Swap</div><div class="stats-value">-</div>' +
+          '<div class="stats-name">Average Daily Volume</div><div class="stats-value">-</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="stats-group" title="Hold time and expectancy">' +
+        '<div class="group-title">Hold Time & Expectancy</div>' +
+        '<div class="stats-list">' +
+          '<div class="stats-name">Avg Hold Time (All)</div><div class="stats-value">-</div>' +
+          '<div class="stats-name">Avg Hold Time (Winning)</div><div class="stats-value">-</div>' +
+          '<div class="stats-name">Avg Hold Time (Losing)</div><div class="stats-value">-</div>' +
+          '<div class="stats-name">Avg Hold Time (Scratch)</div><div class="stats-value">-</div>' +
+          '<div class="stats-name">R-multiple</div><div class="stats-value">-</div>' +
+          '<div class="stats-name">Trade Expectancy</div><div class="stats-value">-</div>' +
+        '</div>' +
+      '</div>';
 }

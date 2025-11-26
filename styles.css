@@ -96,6 +96,14 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .stat-card .kpi .label { font-size: 9px; opacity: 0.8; }
 .stat-card .kpi .value { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mini-chart { width: 100%; height: 120px; }
+.stats-table-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 20px 0; }
+.stats-group { background: var(--card-bg); border: 1px solid var(--grid); border-radius: 12px; padding: 16px; }
+.stats-group .group-title { font-weight: 700; font-size: 13px; color: var(--text); margin-bottom: 10px; }
+.stats-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+.stats-row { display: contents; }
+.stats-name { color: #94a3b8; font-size: 13px; }
+.stats-value { color: var(--text); font-weight: 700; font-size: 13px; text-align: right; }
+@media (max-width: 768px) { .stats-table-grid { grid-template-columns: 1fr; } }
 .charts-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
 .chart-card { background: var(--card-bg); border: 1px solid var(--grid); border-radius: 12px; padding: 20px; height: 450px; display: flex; flex-direction: column; overflow: hidden; }
 .chart-card > strong { margin-bottom: 10px; }
