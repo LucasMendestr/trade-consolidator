@@ -139,16 +139,26 @@
             </div>
             <div class="day-content">
                 <table class="day-table">
+                    <colgroup>
+                        <col class="cell-time" />
+                        <col class="cell-ticker" />
+                        <col class="cell-side" />
+                        <col class="cell-instrument" />
+                        <col class="cell-pnl" />
+                        <col class="cell-close" />
+                        <col class="cell-duration" />
+                        <col class="cell-strategy" />
+                    </colgroup>
                     <thead>
                         <tr>
-                            <th>Open time</th>
-                            <th>Ticker</th>
-                            <th>Side</th>
-                            <th>Instrument</th>
-                            <th style="text-align:right;">Net P&L</th>
-                            <th>Close time</th>
-                            <th>Duration</th>
-                            <th>Estratégia</th>
+                            <th class="cell-time">Open time</th>
+                            <th class="cell-ticker">Ticker</th>
+                            <th class="cell-side">Side</th>
+                            <th class="cell-instrument">Instrument</th>
+                            <th class="cell-pnl" style="text-align:right;">Net P&L</th>
+                            <th class="cell-close">Close time</th>
+                            <th class="cell-duration">Duration</th>
+                            <th class="cell-strategy">Estratégia</th>
                         </tr>
                     </thead>
                     <tbody id="dayModalTableBody"></tbody>

@@ -466,22 +466,29 @@ function openDayModal(isoDate){ try {
     charts.dayModal = new Chart(ctx, { type:'line', data:{ labels: trades.map(function(t){ var dt=new Date(t.endTime||t.startTime); return dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }), datasets:[{ data:pnlCurve, borderColor:'#22d3ee', backgroundColor:grad, tension:0.35, borderWidth:2 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales:{ x:{ grid:{ color:'rgba(148,163,184,0.2)' } }, y:{ grid:{ color:'rgba(148,163,184,0.2)' } } } } });
     // Table
     var body = document.getElementById('dayModalTableBody'); var rows='';
+    function fmtHMS(ms){ var s=Math.floor(ms/1000); var h=Math.floor(s/3600); var m=Math.floor((s%3600)/60); var sec=s%60; return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0'); }
     for (var i=0;i<trades.length;i++){
-        var t=trades[i]; var open=new Date(t.startTime||t.entryTime); var close=new Date(t.endTime||t.exitTime);
-        var durMs = (!isNaN(open)&&!isNaN(close)) ? (close - open) : 0;
-        function fmtHMS(ms){ var s=Math.floor(ms/1000); var h=Math.floor(s/3600); var m=Math.floor((s%3600)/60); var sec=s%60; return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0'); }
-        var side=(t.side||t.direction||'').toUpperCase(); var sideBadge= side==='SHORT'? '<span class="badge-short">SHORT</span>' : '<span class="badge-long">LONG</span>';
-        var instr=t.instrument||t.symbol||'-'; var pnl=parseFloat(t.pnlDollars||0)||0; var pnlCls= pnl>=0?'pos':'neg';
-        var strat=t['estratégia']||t.estrategia||t.strategy||'-';
+        var t=trades[i];
+        var openRaw = t.open_time || t.startTime || t.entryTime;
+        var closeRaw = t.close_time || t.endTime || t.exitTime;
+        var open = new Date(openRaw);
+        var close = new Date(closeRaw);
+        var durMs = (!isNaN(open) && !isNaN(close) && close>=open) ? (close - open) : 0;
+        var ticker = t.ticker || t.symbol || '-';
+        var sideRaw = (t.side || t.direction || '').toString().toUpperCase();
+        var sideBadge = sideRaw==='SHORT'? '<span class="badge-short">SHORT</span>' : '<span class="badge-long">LONG</span>';
+        var instrument = t.instrument || '-';
+        var pnl = parseFloat(t.net_pnl || t.pnlDollars || 0) || 0;
+        var strategy = t['estratégia'] || t.estrategia || t.strategy || '-';
         rows += '<tr>'+
-            '<td>'+ (isNaN(open)?'-':open.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})) +'</td>'+
-            '<td>'+ (t.symbol||t.ticker||instr) +'</td>'+
-            '<td>'+ sideBadge +'</td>'+
-            '<td>'+ instr +'</td>'+
-            '<td style="text-align:right;" class="'+(pnl>=0?'pos':'neg')+'">'+ ((pnl>=0?'+':'-')+'$'+Math.abs(pnl).toFixed(2)) +'</td>'+
-            '<td>'+ (isNaN(close)?'-':close.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})) +'</td>'+
-            '<td>'+ fmtHMS(durMs) +'</td>'+
-            '<td>'+ strat +'</td>'+
+            '<td class="cell-time">'+ (isNaN(open)?'-':open.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})) +'</td>'+
+            '<td class="cell-ticker">'+ ticker +'</td>'+
+            '<td class="cell-side">'+ sideBadge +'</td>'+
+            '<td class="cell-instrument">'+ instrument +'</td>'+
+            '<td class="cell-pnl '+(pnl>=0?'pos':'neg')+'">'+ ((pnl>=0?'+':'-')+'$'+Math.abs(pnl).toFixed(2)) +'</td>'+
+            '<td class="cell-close">'+ (isNaN(close)?'-':close.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})) +'</td>'+
+            '<td class="cell-duration">'+ fmtHMS(durMs) +'</td>'+
+            '<td class="cell-strategy">'+ strategy +'</td>'+
         '</tr>';
     }
     body.innerHTML = rows || '<tr><td colspan="8" style="text-align:center; padding:20px; color:#94a3b8;">Sem trades neste dia</td></tr>';
