@@ -177,6 +177,7 @@ function renderCharts() {
 
     renderWeeklyCharts();
     renderStrategySections();
+    initCalendarIfNeeded();
 }
 
 function renderMiniCards() {
@@ -365,4 +366,68 @@ function renderStrategySummary(keys, labels, countsMap, winsMap, pnlMap, closed)
     }).join('');
     el.innerHTML = '<div class="group-title" style="margin-bottom:8px;">Resumo por Estratégia</div>'+
       '<table><thead><tr><th>Estratégia</th><th>Net Profit</th><th>Winning %</th><th>Total Profits</th><th>Total Loss</th><th>Trades</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+// Calendar state
+var calendarState = { month: null, year: null };
+function initCalendarIfNeeded(){
+    try {
+        if (calendarState.month === null || calendarState.year === null) {
+            const now = new Date();
+            calendarState.month = now.getMonth();
+            calendarState.year = now.getFullYear();
+        }
+        renderCalendar(calendarState.month, calendarState.year);
+    } catch (e) {}
+}
+function prevCalendarMonth(){ calendarState.month--; if (calendarState.month < 0) { calendarState.month = 11; calendarState.year--; } renderCalendar(calendarState.month, calendarState.year); }
+function nextCalendarMonth(){ calendarState.month++; if (calendarState.month > 11) { calendarState.month = 0; calendarState.year++; } renderCalendar(calendarState.month, calendarState.year); }
+function renderCalendar(month, year){
+    const grid = document.getElementById('calendarGrid'); const labelEl = document.getElementById('calendarMonthLabel'); if (!grid || !labelEl) return;
+    const monthNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    labelEl.textContent = '(' + monthNames[month] + ' / ' + year + ')';
+    const first = new Date(year, month, 1);
+    const last = new Date(year, month + 1, 0);
+    const startDow = first.getDay();
+    const totalDays = last.getDate();
+    // Aggregate daily pnl and counts
+    const dailyMap = {}; const closed = []; for (let i=0;i<filteredTrades.length;i++){ if (filteredTrades[i].status === 'Closed') closed.push(filteredTrades[i]); }
+    for (let i=0;i<closed.length;i++){
+        const t = closed[i]; const d = new Date(t.endTime || t.startTime); if (isNaN(d)) continue; if (d.getMonth() !== month || d.getFullYear() !== year) continue; const key = d.toISOString().slice(0,10);
+        const pnl = parseFloat(t.pnlDollars || 0) || 0; if (!dailyMap[key]) dailyMap[key]={ pnl:0, count:0, date:d }; dailyMap[key].pnl += pnl; dailyMap[key].count += 1;
+    }
+    // Build header row (weekdays + total)
+    const headerHtml = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb','Total'].map(function(h){ return '<div class="calendar-weekday">'+h+'</div>'; }).join('');
+    let cellsHtml = headerHtml;
+    // Weeks rows
+    let day = 1; while (day <= totalDays) {
+        // Seven day cells
+        for (let dow = 0; dow < 7; dow++) {
+            if (cellsHtml.length === headerHtml.length) { /* first row after header */ }
+            const cellIndex = (day === 1 && dow < startDow) ? null : (day <= totalDays ? day : null);
+            if (cellIndex === null) { cellsHtml += '<div class="calendar-cell cal-neutral"></div>'; }
+            else {
+                const d = new Date(year, month, day);
+                const k = d.toISOString().slice(0,10);
+                const rec = dailyMap[k];
+                const cls = rec ? (rec.pnl>=0 ? 'cal-pos' : 'cal-neg') : 'cal-neutral';
+                const pnlText = rec ? ((rec.pnl>=0?'+':'-') + '$' + Math.abs(rec.pnl).toFixed(0)) : '';
+                const cntText = rec ? (rec.count + (rec.count===1?' trade':' trades')) : '';
+                cellsHtml += '<div class="calendar-cell '+cls+'"><div class="date">'+day+'</div><div class="line">'+pnlText+'</div><div class="line">'+cntText+'</div></div>';
+                day++;
+            }
+        }
+        // Weekly total cell
+        // Compute range for this week row
+        const rowStartDay = Math.max(1, day-7);
+        const rowEndDay = Math.min(totalDays, day-1);
+        let weekPnl = 0, weekCount = 0;
+        for (let dnum=rowStartDay; dnum<=rowEndDay; dnum++){
+            const d = new Date(year, month, dnum); const k = d.toISOString().slice(0,10); const rec = dailyMap[k]; if (rec) { weekPnl += rec.pnl; weekCount += rec.count; }
+        }
+        const totalCls = weekPnl===0 ? 'cal-neutral' : (weekPnl>0 ? 'cal-pos' : 'cal-neg');
+        const totalPnlText = (weekPnl>=0?'+':'-') + '$' + Math.abs(weekPnl).toFixed(0);
+        const totalCntText = weekCount + (weekCount===1?' trade':' trades');
+        cellsHtml += '<div class="calendar-total '+totalCls+'"><div>'+totalPnlText+'</div><div>'+totalCntText+'</div></div>';
+    }
+    grid.innerHTML = cellsHtml;
 }
