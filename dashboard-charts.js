@@ -76,6 +76,33 @@ function updateDashboard() {
             '<canvas id="miniHitGauge" class="donut-chart"></canvas>' +
         '</div>';
     renderMiniCards();
+    // Hold time & expectancy metrics
+    function parseTime(t){ const d = new Date(t); return isNaN(d) ? null : d.getTime(); }
+    function avgDuration(msArray){ if (!msArray.length) return null; const s = msArray.reduce(function(a,b){ return a + b; }, 0); return Math.round(s / msArray.length); }
+    const durAll = [], durWin = [], durLoss = [], durScratch = [];
+    for (let i = 0; i < filteredTrades.length; i++) {
+        const t = filteredTrades[i];
+        const start = parseTime(t.startTime || t.entryTime);
+        const end = parseTime(t.endTime || t.exitTime);
+        if (start !== null && end !== null && end >= start) {
+            const ms = end - start;
+            durAll.push(ms);
+            const pnl = parseFloat(t.pnlDollars || 0);
+            if (pnl > 0) durWin.push(ms); else if (pnl < 0) durLoss.push(ms); else durScratch.push(ms);
+        }
+    }
+    const avgHoldAll = avgDuration(durAll);
+    const avgHoldWin = avgDuration(durWin);
+    const avgHoldLoss = avgDuration(durLoss);
+    const avgHoldScratch = avgDuration(durScratch);
+    let rSum = 0, rCount = 0;
+    for (let i = 0; i < filteredTrades.length; i++) { let r = filteredTrades[i].rMultiple; if (r === undefined) r = filteredTrades[i].r_multiple; if (r === undefined) r = filteredTrades[i].r; if (r === undefined) { const risk = parseFloat(filteredTrades[i].risk || filteredTrades[i].initialRisk || 0); const pnl = parseFloat(filteredTrades[i].pnlDollars || 0); if (!isNaN(risk) && risk > 0) r = pnl / risk; else r = 0; } r = parseFloat(r); if (!isNaN(r)) { rSum += r; rCount++; } }
+    const avgRMultiple = rCount ? (rSum / rCount) : null;
+    const winPct = totalTrades ? (wins / totalTrades) : 0;
+    const lossPct = totalTrades ? (losses / totalTrades) : 0;
+    const avgWinP = wins ? (sumProfit / wins) : 0;
+    const avgLossP = losses ? (sumLoss / losses) : 0;
+    const expectancy = (winPct * avgWinP) - (lossPct * Math.abs(avgLossP));
 
     renderStatisticsTable({
         totalPnL: totalPnL,
@@ -95,7 +122,13 @@ function updateDashboard() {
         worstDay: worstDay,
         avgPerTrade: avgPerTrade,
         avgPerDay: avgPerDay,
-        tradingDays: (function(){ const set=new Set(); for (let i=0;i<filteredTrades.length;i++){ const d=new Date(filteredTrades[i].endTime||filteredTrades[i].startTime); if(!isNaN(d)) set.add(d.toISOString().slice(0,10)); } return set.size; })()
+        tradingDays: (function(){ const set=new Set(); for (let i=0;i<filteredTrades.length;i++){ const d=new Date(filteredTrades[i].endTime||filteredTrades[i].startTime); if(!isNaN(d)) set.add(d.toISOString().slice(0,10)); } return set.size; })(),
+        avgHoldAll: avgHoldAll,
+        avgHoldWin: avgHoldWin,
+        avgHoldLoss: avgHoldLoss,
+        avgHoldScratch: avgHoldScratch,
+        avgRMultiple: avgRMultiple,
+        expectancy: expectancy
     });
 }
 
@@ -168,6 +201,7 @@ function renderMiniCards() {
 function renderStatisticsTable(m) {
     function fmtCurrency(v){ if (v===null||v===undefined||isNaN(v)) return '-'; const s = (v>=0?'+':'-') + '$' + Math.abs(v).toFixed(2); return s; }
     function fmtNumber(v){ if (v===null||v===undefined||isNaN(v)) return '-'; return String(v); }
+    function fmtDuration(ms){ if (ms===null||ms===undefined) return '-'; const sec=Math.floor(ms/1000); const d=Math.floor(sec/86400); const h=Math.floor((sec%86400)/3600); const m=Math.floor((sec%3600)/60); const s=sec%60; if (d>0) return d+'d '+h+'h '+m+'m'; return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0'); }
     const el = document.getElementById('statisticsTable'); if (!el) return;
     el.innerHTML =
       '<div class="stats-group" title="Performance metrics">' +
@@ -208,12 +242,12 @@ function renderStatisticsTable(m) {
       '<div class="stats-group" title="Hold time and expectancy">' +
         '<div class="group-title">Hold Time & Expectancy</div>' +
         '<div class="stats-list">' +
-          '<div class="stats-name">Avg Hold Time (All)</div><div class="stats-value">-</div>' +
-          '<div class="stats-name">Avg Hold Time (Winning)</div><div class="stats-value">-</div>' +
-          '<div class="stats-name">Avg Hold Time (Losing)</div><div class="stats-value">-</div>' +
-          '<div class="stats-name">Avg Hold Time (Scratch)</div><div class="stats-value">-</div>' +
-          '<div class="stats-name">R-multiple</div><div class="stats-value">-</div>' +
-          '<div class="stats-name">Trade Expectancy</div><div class="stats-value">-</div>' +
+          '<div class="stats-name">Avg Hold Time (All)</div><div class="stats-value">' + fmtDuration(m.avgHoldAll) + '</div>' +
+          '<div class="stats-name">Avg Hold Time (Winning)</div><div class="stats-value">' + fmtDuration(m.avgHoldWin) + '</div>' +
+          '<div class="stats-name">Avg Hold Time (Losing)</div><div class="stats-value">' + fmtDuration(m.avgHoldLoss) + '</div>' +
+          '<div class="stats-name">Avg Hold Time (Scratch)</div><div class="stats-value">' + fmtDuration(m.avgHoldScratch) + '</div>' +
+          '<div class="stats-name">Avg R-multiple</div><div class="stats-value">' + (m.avgRMultiple!==null?m.avgRMultiple.toFixed(2):'-') + '</div>' +
+          '<div class="stats-name">Trade Expectancy</div><div class="stats-value">' + fmtCurrency(m.expectancy) + '</div>' +
         '</div>' +
       '</div>';
 }
