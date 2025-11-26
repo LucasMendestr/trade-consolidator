@@ -307,46 +307,51 @@ function renderStrategySections(){
     const gridColor = cs.getPropertyValue('--grid').trim() || '#334155';
     const textColor = cs.getPropertyValue('--text').trim() || '#e5e7eb';
     const closed = []; for (let i=0;i<filteredTrades.length;i++){ const t=filteredTrades[i]; if (t.status === 'Closed') closed.push(t); }
-    const stratMapCounts = {}; const stratMapPnl = {}; const stratWins = {}; const stratTrades = {}; let minDate=null, maxDate=null;
+    const stratCounts = {}; const stratPnl = {}; const stratWins = {}; const labelMap = {}; let minDate=null, maxDate=null;
     for (let i=0;i<closed.length;i++){
         const t = closed[i];
-        const name = (t['estratégia'] || t.estrategia || t.strategy || 'Sem estratégia') || 'Sem estratégia';
+        const idRaw = (t.strategy_id !== undefined && t.strategy_id !== null) ? t.strategy_id : (t.strategyId !== undefined ? t.strategyId : null);
+        const key = (idRaw !== null && idRaw !== undefined) ? String(idRaw) : 'none';
+        const nameField = t['estratégia'] || t.estrategia || t.strategy;
+        const label = nameField ? String(nameField) : (key === 'none' ? 'Sem estratégia' : ('ID ' + key));
+        labelMap[key] = label;
         const pnl = parseFloat(t.pnlDollars || 0) || 0;
-        stratMapCounts[name] = (stratMapCounts[name] || 0) + 1;
-        stratMapPnl[name] = (stratMapPnl[name] || 0) + pnl;
-        stratTrades[name] = (stratTrades[name] || 0) + 1;
-        if (pnl > 0) stratWins[name] = (stratWins[name] || 0) + 1;
+        stratCounts[key] = (stratCounts[key] || 0) + 1;
+        stratPnl[key] = (stratPnl[key] || 0) + pnl;
+        if (pnl > 0) stratWins[key] = (stratWins[key] || 0) + 1;
         const d = new Date(t.endTime || t.startTime); const ts = d.getTime(); if(!isNaN(ts)){ if(minDate===null||ts<minDate) minDate=ts; if(maxDate===null||ts>maxDate) maxDate=ts; }
     }
-    const strategies = Object.keys(stratMapCounts);
-    const counts = strategies.map(function(k){ return stratMapCounts[k]; });
-    const pnls = strategies.map(function(k){ return stratMapPnl[k]; });
+    const keys = Object.keys(stratCounts);
+    const labels = keys.map(function(k){ return labelMap[k] || ('ID ' + k); });
+    const counts = keys.map(function(k){ return stratCounts[k]; });
+    const pnls = keys.map(function(k){ return stratPnl[k]; });
     const colors = pnls.map(function(v){ return v>=0?positive:negative; });
     const rangeText = (minDate && maxDate) ? (new Date(minDate).toLocaleDateString('pt-BR') + ' — ' + new Date(maxDate).toLocaleDateString('pt-BR')) : '';
     const sr1 = document.getElementById('strategyRange1'); const sr2 = document.getElementById('strategyRange2'); if(sr1) sr1.textContent = rangeText; if(sr2) sr2.textContent = rangeText;
     const elDist = document.getElementById('chartTradesByStrategy'); const elPerf = document.getElementById('chartPnlByStrategy');
     if (elDist) {
         if (charts.tradesByStrategy) charts.tradesByStrategy.destroy();
-        charts.tradesByStrategy = new Chart(elDist.getContext('2d'), { type: 'bar', data: { labels: strategies, datasets: [{ label: 'Trades', data: counts, backgroundColor: accent, borderColor: '#ffffff22', borderWidth: 1 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: true, padding: 8 } }, scales: { x: { grid: { color: 'rgba(148,163,184,0.2)' }, ticks: { color: textColor } }, y: { grid: { color: 'rgba(148,163,184,0.1)' }, ticks: { color: textColor } } } } });
+        charts.tradesByStrategy = new Chart(elDist.getContext('2d'), { type: 'bar', data: { labels: labels, datasets: [{ label: 'Trades', data: counts, backgroundColor: accent, borderColor: '#ffffff22', borderWidth: 1 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: true, padding: 8 } }, scales: { x: { grid: { color: 'rgba(148,163,184,0.2)' }, ticks: { color: textColor } }, y: { grid: { color: 'rgba(148,163,184,0.1)' }, ticks: { color: textColor } } } } });
     }
     if (elPerf) {
         if (charts.pnlByStrategy) charts.pnlByStrategy.destroy();
-        charts.pnlByStrategy = new Chart(elPerf.getContext('2d'), { type: 'bar', data: { labels: strategies, datasets: [{ label: 'PnL', data: pnls, backgroundColor: colors, borderColor: '#ffffff22', borderWidth: 1 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: true, padding: 8 } }, scales: { x: { grid: { color: 'rgba(148,163,184,0.2)' }, ticks: { color: textColor } }, y: { grid: { color: 'rgba(148,163,184,0.1)' }, ticks: { color: textColor } } } } });
+        charts.pnlByStrategy = new Chart(elPerf.getContext('2d'), { type: 'bar', data: { labels: labels, datasets: [{ label: 'PnL', data: pnls, backgroundColor: colors, borderColor: '#ffffff22', borderWidth: 1 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: true, padding: 8 } }, scales: { x: { grid: { color: 'rgba(148,163,184,0.2)' }, ticks: { color: textColor } }, y: { grid: { color: 'rgba(148,163,184,0.1)' }, ticks: { color: textColor } } } } });
     }
-    renderStrategySummary(strategies, stratMapCounts, stratWins, stratMapPnl, closed);
+    renderStrategySummary(keys, labels, stratCounts, stratWins, stratPnl, closed);
 }
 
-function renderStrategySummary(labels, countsMap, winsMap, pnlMap, closed){
+function renderStrategySummary(keys, labels, countsMap, winsMap, pnlMap, closed){
     const el = document.getElementById('strategySummaryTable'); if(!el) return;
     function fmtCurrency(v){ if(v===undefined||v===null) return '-'; return (v>=0?'+':'-') + '$' + Math.abs(v).toFixed(2); }
-    const rows = labels.map(function(name){
-        const totalTrades = countsMap[name]||0;
-        const wins = winsMap[name]||0;
+    const rows = keys.map(function(key, idx){
+        const name = labels[idx];
+        const totalTrades = countsMap[key]||0;
+        const wins = winsMap[key]||0;
         const winPct = totalTrades ? (wins/totalTrades)*100 : 0;
-        const net = pnlMap[name]||0;
+        const net = pnlMap[key]||0;
         let totalProfit = 0, totalLoss = 0;
         for (let i=0;i<closed.length;i++){
-            const t=closed[i]; const n=(t['estratégia']||t.estrategia||t.strategy||'Sem estratégia')||'Sem estratégia'; if(n!==name) continue; const pnl=parseFloat(t.pnlDollars||0); if(pnl>0) totalProfit+=pnl; else if(pnl<0) totalLoss+=Math.abs(pnl);
+            const t=closed[i]; const idRaw=(t.strategy_id!==undefined&&t.strategy_id!==null)?t.strategy_id:(t.strategyId!==undefined?t.strategyId:null); const keyT=(idRaw!==null&&idRaw!==undefined)?String(idRaw):'none'; if(keyT!==key) continue; const pnl=parseFloat(t.pnlDollars||0); if(pnl>0) totalProfit+=pnl; else if(pnl<0) totalLoss+=Math.abs(pnl);
         }
         const lossPct = 100 - winPct;
         return '<tr>'+
