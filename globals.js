@@ -7,3 +7,4 @@ let selectedTrade = null;
 let selectedTradeOperations = [];
 let charts = {};
 let allStrategies = [];
+let strategyNameById = {};

@@ -1,9 +1,10 @@
 async function loadStrategies() {
     if (!supabaseClient || !currentUser) return;
     const res = await supabaseClient.from('strategies').select('*').eq('user_id', currentUser.id).order('name');
-    if (!res.error) { allStrategies = res.data || []; }
+    if (!res.error) { allStrategies = res.data || []; strategyNameById = {}; for (let i = 0; i < allStrategies.length; i++) { const s = allStrategies[i]; strategyNameById[String(s.id)] = s.name || 'Sem estratégia'; } }
     renderStrategiesTable();
     try { populateStrategyFilter(); } catch (e) {}
+    try { if (typeof renderStrategySections === 'function') renderStrategySections(); } catch (e) {}
     try { if (document.getElementById('tradesBody')) updateTradesTable(); } catch (e) {}
 }
 

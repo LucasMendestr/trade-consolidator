@@ -320,7 +320,7 @@ function renderStrategySections(){
         const d = new Date(t.endTime || t.startTime); const ts = d.getTime(); if(!isNaN(ts)){ if(minDate===null||ts<minDate) minDate=ts; if(maxDate===null||ts>maxDate) maxDate=ts; }
     }
     const keys = Object.keys(stratCounts);
-    function findStrategyName(id){ try { const s = (allStrategies || []).find(function(x){ return String(x.id) === String(id); }); return s ? (s.name || 'Sem estratégia') : 'Sem estratégia'; } catch(e){ return 'Sem estratégia'; } }
+    function findStrategyName(id){ try { var name = strategyNameById && strategyNameById[String(id)]; if (name) return name; const s = (allStrategies || []).find(function(x){ return String(x.id) === String(id); }); return s ? (s.name || 'Sem estratégia') : 'Sem estratégia'; } catch(e){ return 'Sem estratégia'; } }
     const labels = keys.map(function(k){ return k==='none' ? 'Sem estratégia' : findStrategyName(k); });
     const counts = keys.map(function(k){ return stratCounts[k]; });
     const pnls = keys.map(function(k){ return stratPnl[k]; });
@@ -477,7 +477,7 @@ function openDayModal(isoDate){ try {
         var sideBadge = sideRaw==='SHORT'? '<span class="badge-short">SHORT</span>' : '<span class="badge-long">LONG</span>';
         var instrument = t.instrument || '-';
         var pnl = parseFloat(t.net_pnl || t.pnlDollars || 0) || 0;
-        function strategyNameForTrade(tr){ var id = tr.strategy_id || tr.strategyId; if (id !== undefined && id !== null) { var s = (allStrategies || []).find(function(x){ return String(x.id) === String(id); }); if (s) return s.name || '-'; } return tr['estratégia'] || tr.estrategia || tr.strategy || '-'; }
+        function strategyNameForTrade(tr){ var id = tr.strategy_id || tr.strategyId; if (id !== undefined && id !== null) { var name = strategyNameById && strategyNameById[String(id)]; if (name) return name; var s = (allStrategies || []).find(function(x){ return String(x.id) === String(id); }); if (s) return s.name || '-'; } return tr['estratégia'] || tr.estrategia || tr.strategy || '-'; }
         var strategy = strategyNameForTrade(t);
         rows += '<tr>'+
             '<td class="cell-time">'+ (isNaN(open)?'-':open.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})) +'</td>'+
