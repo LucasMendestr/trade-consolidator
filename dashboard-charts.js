@@ -458,10 +458,13 @@ function openDayModal(isoDate){ try {
     // Small area chart
     if (charts.dayModal) { charts.dayModal.destroy(); }
     var chartEl = document.getElementById('dayModalChart');
-    chartEl.style.height = '80px';
+    function computeHeight(){ var modal = document.getElementById('dayModal'); var baseH = (modal && modal.clientHeight) ? modal.clientHeight : window.innerHeight; var h = Math.max(80, Math.min(220, Math.round(baseH * 0.22))); chartEl.style.height = h + 'px'; }
+    computeHeight();
     var ctx = chartEl.getContext('2d');
-    var grad = ctx.createLinearGradient(0,0,0,120); grad.addColorStop(0,'rgba(34,197,94,0.15)'); grad.addColorStop(1,'rgba(34,197,94,0)');
+    var grad = ctx.createLinearGradient(0,0,0, chartEl.clientHeight || 120); grad.addColorStop(0,'rgba(34,197,94,0.15)'); grad.addColorStop(1,'rgba(34,197,94,0)');
     charts.dayModal = new Chart(ctx, { type:'line', data:{ labels: trades.map(function(t){ var dt=new Date(t.endTime||t.startTime); return dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }), datasets:[{ data:pnlCurve, borderColor:'#22d3ee', backgroundColor:grad, tension:0.35, borderWidth:2 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales:{ x:{ grid:{ color:'rgba(148,163,184,0.2)' } }, y:{ grid:{ color:'rgba(148,163,184,0.2)' } } } } });
+    window.__dayModalResize = function(){ computeHeight(); if (charts.dayModal) charts.dayModal.resize(); };
+    window.addEventListener('resize', window.__dayModalResize);
     // Table
     var body = document.getElementById('dayModalTableBody'); var rows='';
     function fmtHMS(ms){ var s=Math.floor(ms/1000); var h=Math.floor(s/3600); var m=Math.floor((s%3600)/60); var sec=s%60; return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0'); }
@@ -493,4 +496,4 @@ function openDayModal(isoDate){ try {
     body.innerHTML = rows || '<tr><td colspan="8" style="text-align:center; padding:20px; color:#94a3b8;">Sem trades neste dia</td></tr>';
 } catch(e){}
 }
-function closeDayModal(){ var b=document.getElementById('dayModalBackdrop'); var m=document.getElementById('dayModal'); if(b) b.classList.remove('open'); if(m) m.classList.remove('open'); if (charts.dayModal) { charts.dayModal.destroy(); charts.dayModal=null; } }
+function closeDayModal(){ var b=document.getElementById('dayModalBackdrop'); var m=document.getElementById('dayModal'); if(b) b.classList.remove('open'); if(m) m.classList.remove('open'); if (charts.dayModal) { charts.dayModal.destroy(); charts.dayModal=null; } if (window.__dayModalResize) { window.removeEventListener('resize', window.__dayModalResize); window.__dayModalResize=null; } }

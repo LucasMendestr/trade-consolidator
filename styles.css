@@ -295,11 +295,13 @@ body.sidebar-collapsed { --sidebar-w: 64px; }
   position: fixed;
   inset: 5% 5%;
   max-height: 90vh;
+  max-width: 1200px;
+  margin: 0 auto;
   background: var(--card-bg);
   border: 1px solid var(--grid);
   border-radius: 12px;
   box-shadow: var(--shadow);
-  display: none;          /* fica escondido inicialmente */
+  display: none;
   z-index: 1001;
   overflow: hidden;
 }
@@ -318,10 +320,10 @@ body.sidebar-collapsed { --sidebar-w: 64px; }
   flex-shrink: 0;  /* não encolhe */
 }
 .day-content {
-  overflow-y: auto;
-  padding-top: 0;  /* remove padding */
+  overflow: auto;
+  padding-top: 0;
   background: var(--card-bg);
-  min-height: 0;   /* permite comprimir */
+  min-height: 0;
 }
 .day-header-top { display:flex; justify-content: space-between; align-items: center; }
 .day-title { font-weight: 700; font-size: 14px; }
@@ -332,12 +334,12 @@ body.sidebar-collapsed { --sidebar-w: 64px; }
 .day-card .label { font-size: 11px; color:#94a3b8; }
 .day-card .value { font-size: 14px; font-weight: 700; }
 .day-chart {
-  height: 80px;
+  height: clamp(80px, 20vh, 180px);
   margin-top: 10px;
   margin-bottom: 8px;
   position: relative;
 }
-.day-chart canvas { width: 100% !important; height: 80px !important; }
+.day-chart canvas { width: 100% !important; height: 100% !important; }
 .day-table { width: 100%; border-collapse: collapse; }
 .day-table th, .day-table td { padding: 10px; border-bottom: 1px solid var(--grid); font-size: 13px; }
 .day-table th { 
@@ -351,7 +353,7 @@ body.sidebar-collapsed { --sidebar-w: 64px; }
 .day-table tr:nth-child(even) { background: var(--surface); }
 .day-table tr:nth-child(odd) { background: var(--card-bg); }
 .day-table tr:hover { background: rgba(148,163,184,0.10); }
-.day-table { table-layout: fixed; }
+.day-table { table-layout: fixed; min-width: 860px; }
 .day-table th, .day-table td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cell-time { width: 110px; }
 .cell-ticker { width: 100px; }
@@ -376,3 +378,12 @@ body.sidebar-collapsed { --sidebar-w: 64px; }
   font-weight: 700; 
 }
 .calendar-cell { cursor: pointer; }
+
+@media (max-width: 1024px) {
+  .day-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .day-modal { inset: 2% 2%; max-height: 96vh; }
+  .day-summary { grid-template-columns: 1fr; }
+  .day-chart { height: clamp(72px, 18vh, 160px); }
+}
