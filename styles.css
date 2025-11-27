@@ -309,7 +309,7 @@ body.sidebar-collapsed { --sidebar-w: 64px; }
   border-bottom: 1px solid var(--grid);
   padding: 12px;
   z-index: 10;
-  max-height: 700px;        /* limita a altura máxima */
+  max-height: 120px;        /* limita a altura máxima */
   overflow-y: auto;         /* se passar de 260px, rola internamente */
   flex-shrink: 0;           /* impede que encolha em grid */
 }
