@@ -305,7 +305,7 @@ body.sidebar-collapsed { --sidebar-w: 64px; }
 }
 .day-modal.open {
   display: grid;
-  grid-template-rows: auto 1fr;  /* header com altura natural + conteúdo flex */
+  grid-template-rows: auto 1fr;
 }
 .day-modal-backdrop.open { display: block; }
 .day-header {
@@ -315,13 +315,13 @@ body.sidebar-collapsed { --sidebar-w: 64px; }
   padding: 12px;
   z-index: 10;
   overflow: hidden;
-  max-height: 200px;         /* limita o header a 200px */
-  overflow-y: auto;          /* se passar, o próprio header rola */
+  flex-shrink: 0;  /* não encolhe */
 }
 .day-content {
   overflow-y: auto;
-  padding-top: 28px;
-  background: var(--card-bg);           /* permite comprimir até 0 */
+  padding-top: 0;  /* remove padding */
+  background: var(--card-bg);
+  min-height: 0;   /* permite comprimir */
 }
 .day-header-top { display:flex; justify-content: space-between; align-items: center; }
 .day-title { font-weight: 700; font-size: 14px; }
@@ -332,12 +332,11 @@ body.sidebar-collapsed { --sidebar-w: 64px; }
 .day-card .label { font-size: 11px; color:#94a3b8; }
 .day-card .value { font-size: 14px; font-weight: 700; }
 .day-chart {
-  height: 80px;            /* volta para 80px em vez de 150px */
+  height: 80px;
   margin-top: 10px;
   margin-bottom: 8px;
   position: relative;
 }
-
 .day-chart canvas { width: 100% !important; height: 80px !important; }
 .day-table { width: 100%; border-collapse: collapse; }
 .day-table th, .day-table td { padding: 10px; border-bottom: 1px solid var(--grid); font-size: 13px; }
