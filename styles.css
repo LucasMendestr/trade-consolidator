@@ -298,19 +298,16 @@ body.sidebar-collapsed { --sidebar-w: 64px; }
   overflow: hidden;
 }
 .day-modal.open {
-  display: grid;                 /* só vira grid quando estiver aberta */
+  display: flex;                 /* só vira grid quando estiver aberta */
   grid-template-rows: auto 1fr;  /* header + conteúdo rolável */
 }
 .day-modal-backdrop.open { display: block; }
 .day-header {
-  position: sticky;
-  top: 0;
+  position: relative;
   background: var(--card-bg);
   border-bottom: 1px solid var(--grid);
   padding: 12px;
-  z-index: 10;
-  max-height: 120px;        /* limita a altura máxima */
-  overflow-y: auto;         /* se passar de 260px, rola internamente */
+  z-index: 10;        /* se passar de 260px, rola internamente */
   flex-shrink: 0;           /* impede que encolha em grid */
 }
 .day-content { flex: 1 1 auto; overflow-y: auto; padding-top: 28px; background: var(--card-bg); min-height: 0; }
