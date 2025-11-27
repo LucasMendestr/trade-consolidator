@@ -308,14 +308,11 @@ function renderStrategySections(){
     const gridColor = cs.getPropertyValue('--grid').trim() || '#334155';
     const textColor = cs.getPropertyValue('--text').trim() || '#e5e7eb';
     const closed = []; for (let i=0;i<filteredTrades.length;i++){ const t=filteredTrades[i]; if (t.status === 'Closed') closed.push(t); }
-    const stratCounts = {}; const stratPnl = {}; const stratWins = {}; const labelMap = {}; let minDate=null, maxDate=null;
+    const stratCounts = {}; const stratPnl = {}; const stratWins = {}; let minDate=null, maxDate=null;
     for (let i=0;i<closed.length;i++){
         const t = closed[i];
         const idRaw = (t.strategy_id !== undefined && t.strategy_id !== null) ? t.strategy_id : (t.strategyId !== undefined ? t.strategyId : null);
         const key = (idRaw !== null && idRaw !== undefined) ? String(idRaw) : 'none';
-        const nameField = t['estratégia'] || t.estrategia || t.strategy;
-        const label = nameField ? String(nameField) : (key === 'none' ? 'Sem estratégia' : ('ID ' + key));
-        labelMap[key] = label;
         const pnl = parseFloat(t.pnlDollars || 0) || 0;
         stratCounts[key] = (stratCounts[key] || 0) + 1;
         stratPnl[key] = (stratPnl[key] || 0) + pnl;
@@ -323,7 +320,8 @@ function renderStrategySections(){
         const d = new Date(t.endTime || t.startTime); const ts = d.getTime(); if(!isNaN(ts)){ if(minDate===null||ts<minDate) minDate=ts; if(maxDate===null||ts>maxDate) maxDate=ts; }
     }
     const keys = Object.keys(stratCounts);
-    const labels = keys.map(function(k){ return labelMap[k] || ('ID ' + k); });
+    function findStrategyName(id){ try { const s = (allStrategies || []).find(function(x){ return String(x.id) === String(id); }); return s ? (s.name || 'Sem estratégia') : 'Sem estratégia'; } catch(e){ return 'Sem estratégia'; } }
+    const labels = keys.map(function(k){ return k==='none' ? 'Sem estratégia' : findStrategyName(k); });
     const counts = keys.map(function(k){ return stratCounts[k]; });
     const pnls = keys.map(function(k){ return stratPnl[k]; });
     const colors = pnls.map(function(v){ return v>=0?positive:negative; });
@@ -479,7 +477,8 @@ function openDayModal(isoDate){ try {
         var sideBadge = sideRaw==='SHORT'? '<span class="badge-short">SHORT</span>' : '<span class="badge-long">LONG</span>';
         var instrument = t.instrument || '-';
         var pnl = parseFloat(t.net_pnl || t.pnlDollars || 0) || 0;
-        var strategy = t['estratégia'] || t.estrategia || t.strategy || '-';
+        function strategyNameForTrade(tr){ var id = tr.strategy_id || tr.strategyId; if (id !== undefined && id !== null) { var s = (allStrategies || []).find(function(x){ return String(x.id) === String(id); }); if (s) return s.name || '-'; } return tr['estratégia'] || tr.estrategia || tr.strategy || '-'; }
+        var strategy = strategyNameForTrade(t);
         rows += '<tr>'+
             '<td class="cell-time">'+ (isNaN(open)?'-':open.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})) +'</td>'+
             '<td class="cell-ticker">'+ ticker +'</td>'+
