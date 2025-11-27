@@ -1,0 +1,137 @@
+import { state } from '../state.js'
+import { loadDataFromSupabase } from './trades.js'
+
+export async function handleFileUpload(event) {
+  const file = event.target.files[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = async function(e) {
+    try { await processCSV(e.target.result) }
+    catch (err) {
+      const el = document.getElementById('uploadMessage')
+      if (el) { el.textContent = 'Erro: ' + (err && err.message ? err.message : 'Falha ao processar arquivo'); el.className = 'error' }
+    }
+  }
+  reader.readAsText(file)
+}
+
+function normalizeNumber(n) { if (typeof n !== 'string') return n; return parseFloat(n.replace('.', '').replace(',', '.')) }
+function toIsoUTC(s) {
+  if (!s) return null
+  const raw = String(s).trim()
+  let m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.(\d{1,3}))?$/)
+  if (m) { const d = new Date(parseInt(m[3],10), parseInt(m[2],10)-1, parseInt(m[1],10), parseInt(m[4],10), parseInt(m[5],10), m[6]?parseInt(m[6],10):0, m[7]?parseInt(m[7],10):0); if (!isNaN(d.getTime())) return d.toISOString() }
+  m = raw.match(/^(\d{1,2})-(\d{1,2})-(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.(\d{1,3}))?$/)
+  if (m) { const d = new Date(parseInt(m[3],10), parseInt(m[2],10)-1, parseInt(m[1],10), parseInt(m[4],10), parseInt(m[5],10), m[6]?parseInt(m[6],10):0, m[7]?parseInt(m[7],10):0); if (!isNaN(d.getTime())) return d.toISOString() }
+  m = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.(\d{1,3}))?)?$/)
+  if (m) { const y = parseInt(m[1],10), mo = parseInt(m[2],10)-1, da = parseInt(m[3],10); const hh = m[4]?parseInt(m[4],10):0, mm = m[5]?parseInt(m[5],10):0, ss = m[6]?parseInt(m[6],10):0, ms = m[7]?parseInt(m[7],10):0; const d = new Date(y, mo, da, hh, mm, ss, ms); if (!isNaN(d.getTime())) return d.toISOString() }
+  m = raw.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/)
+  if (m) { const d = new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10), parseInt(m[4],10), parseInt(m[5],10), m[6]?parseInt(m[6],10):0, 0); if (!isNaN(d.getTime())) return d.toISOString() }
+  const direct = new Date(raw); if (!isNaN(direct.getTime())) return direct.toISOString()
+  return null
+}
+
+function getSourceId(op) {
+  const keys = ['ID','Id','Order','OrderID','Order Id','ExecutionID','ExecID','TradeID','Trade Id']
+  for (let i = 0; i < keys.length; i++) { const v = op[keys[i]]; if (v != null && String(v).trim() !== '') return String(v).trim() }
+  return null
+}
+
+async function dedupAndInsertBatch(batch) {
+  try {
+    const instrumentsSet = {}; let minTime = null; let maxTime = null
+    for (let i = 0; i < batch.length; i++) { const t = new Date(batch[i].time); const ti = t.getTime(); if (minTime === null || ti < minTime) minTime = ti; if (maxTime === null || ti > maxTime) maxTime = ti; if (batch[i].instrument) instrumentsSet[batch[i].instrument] = true }
+    const instruments = Object.keys(instrumentsSet)
+    const sourceIds = []; for (let i = 0; i < batch.length; i++) { const sid = batch[i].source_id || ''; if (sid) sourceIds.push(sid) }
+    if (sourceIds.length > 0) {
+      const existingSet = {}; const chunkSize = 100
+      for (let start = 0; start < sourceIds.length; start += chunkSize) {
+        const chunk = sourceIds.slice(start, start + chunkSize)
+        const sel = await state.supabaseClient.from('operations').select('source_id').eq('user_id', state.currentUser.id).in('source_id', chunk)
+        const existing = sel.data || []
+        for (let i = 0; i < existing.length; i++) { existingSet[existing[i].source_id] = true }
+      }
+      const keysInBatch = {}; const toInsert = []; let duplicates = 0
+      for (let i = 0; i < batch.length; i++) {
+        const sid = batch[i].source_id || ''
+        const key = sid || makeOpKeyFromRow(batch[i])
+        if (sid && existingSet[sid]) { duplicates++; continue }
+        if (keysInBatch[key]) { duplicates++; continue }
+        keysInBatch[key] = true
+        toInsert.push(batch[i])
+      }
+      if (toInsert.length === 0) { return { inserted: 0, duplicates, errors: 0, errorDetails: [] } }
+      const res = await state.supabaseClient.from('operations').upsert(toInsert, { onConflict: 'user_id,source_id', ignoreDuplicates: true, returning: 'minimal' })
+      if (res.error) { return { inserted: 0, duplicates, errors: toInsert.length, errorDetails: [{ line: null, type: 'insert', message: res.error.message }] } }
+      return { inserted: toInsert.length, duplicates, errors: 0, errorDetails: [] }
+    }
+    const accountsSet = {}; for (let i = 0; i < batch.length; i++) { const acc = batch[i].account || ''; if (acc) accountsSet[acc] = true }
+    const accounts = Object.keys(accountsSet)
+    const minIso = new Date(minTime).toISOString(); const maxIso = new Date(maxTime).toISOString()
+    let existingKeys = {}
+    if (instruments.length > 0) {
+      let query = state.supabaseClient.from('operations').select('instrument,action,account,e_x,position,quantity,price,commission,time,source_id').eq('user_id', state.currentUser.id).in('instrument', instruments).gte('time', minIso).lte('time', maxIso)
+      if (accounts.length > 0) { query = query.in('account', accounts) }
+      const sel = await query
+      const existing = sel.data || []
+      for (let i = 0; i < existing.length; i++) { existingKeys[makeOpKeyFromDb(existing[i])] = true }
+    }
+    const keysInBatch = {}; const toInsert = []; let duplicates = 0
+    for (let i = 0; i < batch.length; i++) {
+      const key = makeOpKeyFromRow(batch[i])
+      if (existingKeys[key]) { duplicates++; continue }
+      if (keysInBatch[key]) { duplicates++; continue }
+      keysInBatch[key] = true
+      toInsert.push(batch[i])
+    }
+    if (toInsert.length === 0) { return { inserted: 0, duplicates, errors: 0, errorDetails: [] } }
+    const res = await state.supabaseClient.from('operations').insert(toInsert, { returning: 'minimal' })
+    if (res.error) { return { inserted: 0, duplicates, errors: toInsert.length, errorDetails: [{ line: null, type: 'insert', message: res.error.message }] } }
+    return { inserted: toInsert.length, duplicates, errors: 0, errorDetails: [] }
+  } catch (err) { return { inserted: 0, duplicates: 0, errors: batch.length, errorDetails: [{ line: null, type: 'insert', message: err && err.message ? err.message : 'Falha ao inserir lote' }] } }
+}
+
+function makeOpKeyFromRow(row) { const q = parseFloat(row.quantity || 0).toFixed(6); const p = parseFloat(row.price || 0).toFixed(6); const c = parseFloat(row.commission || 0).toFixed(6); const sid = row.source_id || ''; return sid ? ('SID|' + sid) : ((row.instrument || '') + '|' + (row.action || '') + '|' + (row.account || '') + '|' + (row.e_x || '') + '|' + (row.position || '') + '|' + q + '|' + p + '|' + c + '|' + (row.time || '')) }
+function makeOpKeyFromDb(op) { const q = parseFloat(op.quantity || 0).toFixed(6); const p = parseFloat(op.price || 0).toFixed(6); const c = parseFloat(op.commission || 0).toFixed(6); const sid = op.source_id || ''; if (sid) return 'SID|' + sid; const t = new Date(op.time).toISOString(); return (op.instrument || '') + '|' + (op.action || '') + '|' + (op.account || '') + '|' + (op.e_x || '') + '|' + (op.position || '') + '|' + q + '|' + p + '|' + c + '|' + t }
+
+export async function processCSV(csv) {
+  const lines = csv.split(/\r?\n/)
+  const headers = lines[0].split(';').map(function(h) { return h.trim() })
+  let imported = 0; let errors = 0; let duplicates = 0
+  const batchSize = 500; let batch = []
+  const tracker = { parse: 0, validation: 0, normalize: 0, time: 0, insert: 0, other: 0, details: [] }
+  const uploadEl = document.getElementById('uploadMessage'); if (uploadEl) uploadEl.innerHTML = '<div class="loading">⏳ Importando...</div>'
+  for (let i = 1; i < lines.length; i++) {
+    const raw = lines[i]; if (!raw || !raw.trim()) continue
+    try {
+      const values = raw.split(';').map(function(v) { return v.trim() })
+      const op = {}; for (let j = 0; j < headers.length; j++) { op[headers[j]] = values[j] }
+      const required = ['Instrument','Action','Quantity','Price','Time','Account']
+      let missing = []
+      for (let r = 0; r < required.length; r++) { if (!op[required[r]] || String(op[required[r]]).trim() === '') missing.push(required[r]) }
+      if (missing.length > 0) { tracker.validation++; tracker.details.push({ line: i, type: 'validation', message: 'Campos ausentes: ' + missing.join(','), raw: raw }); continue }
+      const qty = normalizeNumber(op.Quantity)
+      const prc = normalizeNumber(op.Price)
+      let com = normalizeNumber((op.Commission || '0').replace('$',''))
+      if (isNaN(qty)) { tracker.normalize++; tracker.details.push({ line: i, type: 'normalize', message: 'Quantidade inválida: ' + op.Quantity, raw: raw }); continue }
+      if (isNaN(prc)) { tracker.normalize++; tracker.details.push({ line: i, type: 'normalize', message: 'Preço inválido: ' + op.Price, raw: raw }); continue }
+      if (isNaN(com)) { tracker.normalize++; tracker.details.push({ line: i, type: 'normalize', message: 'Comissão inválida: ' + op.Commission, raw: raw }); continue }
+      const row = { user_id: state.currentUser.id, instrument: op.Instrument, action: op.Action, quantity: qty, price: prc, time: toIsoUTC(op.Time), e_x: op['E/X'], position: op.Position, commission: com, account: op.Account, source_id: getSourceId(op) }
+      batch.push(row)
+      if (batch.length >= batchSize) {
+        const result = await dedupAndInsertBatch(batch)
+        imported += result.inserted; duplicates += result.duplicates; errors += result.errors
+        if (result.errorDetails && result.errorDetails.length > 0) { for (let k = 0; k < result.errorDetails.length; k++) tracker.details.push(result.errorDetails[k]); tracker.insert += result.errors }
+        batch = []
+      }
+    } catch (err) { errors++; tracker.parse++; tracker.details.push({ line: i, type: 'parse', message: err && err.message ? err.message : 'Falha ao processar linha', raw: raw }) }
+  }
+  if (batch.length > 0) {
+    const result = await dedupAndInsertBatch(batch)
+    imported += result.inserted; duplicates += result.duplicates; errors += result.errors
+    if (result.errorDetails && result.errorDetails.length > 0) { for (let k = 0; k < result.errorDetails.length; k++) tracker.details.push(result.errorDetails[k]); tracker.insert += result.errors }
+  }
+  const statusHtml = '<div class="success">✅ ' + imported + ' processadas, ' + duplicates + ' duplicatas, ' + errors + ' erros</div>'
+  const el = document.getElementById('uploadMessage'); if (el) el.innerHTML = statusHtml
+  try { await loadDataFromSupabase() } catch {}
+}
