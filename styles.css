@@ -298,7 +298,7 @@ body.sidebar-collapsed { --sidebar-w: 64px; }
 .day-card { background: var(--surface); border: 1px solid var(--grid); border-radius: 10px; padding: 8px; }
 .day-card .label { font-size: 11px; color:#94a3b8; }
 .day-card .value { font-size: 14px; font-weight: 700; }
-.day-chart { height: 80px; margin-top: 10px; margin-bottom: 8px; position: relative; }
+.day-chart { height: 80px; margin-top: 10px; margin-bottom: 8px; }
 .day-chart canvas { width: 100% !important; height: 80px !important; }
 .day-header { max-height: 260px; }
 .day-content { flex: 1 1 auto; overflow-y: auto; }
