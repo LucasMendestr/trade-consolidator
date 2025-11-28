@@ -334,7 +334,8 @@ body.sidebar-collapsed { --sidebar-w: 64px; }
 .day-card .label { font-size: 11px; color:#94a3b8; }
 .day-card .value { font-size: 14px; font-weight: 700; }
 .day-chart-wrap {
-  height: clamp(120px, 22vh, 220px);
+  height: clamp(100px, 16vh, 180px);
+  max-height: 180px !important;
   margin-top: 10px;
   margin-bottom: 8px;
   position: relative;
@@ -385,5 +386,5 @@ body.sidebar-collapsed { --sidebar-w: 64px; }
 @media (max-width: 640px) {
   .day-modal { inset: 2% 2%; max-height: 96vh; }
   .day-summary { grid-template-columns: 1fr; }
-  .day-chart-wrap { height: clamp(100px, 20vh, 200px); }
+  .day-chart-wrap { height: clamp(90px, 18vh, 160px); max-height: 160px !important; }
 }
