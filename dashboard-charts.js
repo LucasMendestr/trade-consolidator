@@ -465,6 +465,7 @@ function openDayModal(isoDate){ try {
     charts.dayModal = new Chart(ctx, { type:'line', data:{ labels: trades.map(function(t){ var dt=new Date(t.endTime||t.startTime); return dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }), datasets:[{ data:pnlCurve, borderColor:'#22d3ee', backgroundColor:grad, tension:0.35, borderWidth:2 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales:{ x:{ grid:{ color:'rgba(148,163,184,0.2)' } }, y:{ grid:{ color:'rgba(148,163,184,0.2)' } } } } });
     window.__dayModalResize = function(){ computeHeight(); if (charts.dayModal) charts.dayModal.resize(); };
     window.addEventListener('resize', window.__dayModalResize);
+    renderDayChartStandalone(isoDate);
     // Table
     var body = document.getElementById('dayModalTableBody'); var rows='';
     function fmtHMS(ms){ var s=Math.floor(ms/1000); var h=Math.floor(s/3600); var m=Math.floor((s%3600)/60); var sec=s%60; return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0'); }
@@ -497,3 +498,18 @@ function openDayModal(isoDate){ try {
 } catch(e){}
 }
 function closeDayModal(){ var b=document.getElementById('dayModalBackdrop'); var m=document.getElementById('dayModal'); if(b) b.classList.remove('open'); if(m) m.classList.remove('open'); if (charts.dayModal) { charts.dayModal.destroy(); charts.dayModal=null; } if (window.__dayModalResize) { window.removeEventListener('resize', window.__dayModalResize); window.__dayModalResize=null; } }
+
+function renderDayChartStandalone(isoDate){ try {
+    var el = document.getElementById('dayChartStandalone'); if (!el) return;
+    if (charts.dayStandalone) { charts.dayStandalone.destroy(); charts.dayStandalone=null; }
+    var trades = []; for (var i=0;i<filteredTrades.length;i++){ var t=filteredTrades[i]; var dt=new Date(t.endTime || t.startTime); if(isNaN(dt)) continue; var key=dt.toISOString().slice(0,10); if(key===isoDate) trades.push(t); }
+    trades.sort(function(a,b){ return new Date(a.endTime||a.startTime) - new Date(b.endTime||b.startTime); });
+    var pnlCurve=[]; var run=0; for (var i=0;i<trades.length;i++){ var p=parseFloat(trades[i].pnlDollars||0)||0; run+=p; pnlCurve.push(run); }
+    function computeHeight(){ var baseH = window.innerHeight; var h = Math.max(80, Math.min(220, Math.round(baseH * 0.22))); el.style.height = h + 'px'; }
+    computeHeight();
+    var ctx = el.getContext('2d');
+    var grad = ctx.createLinearGradient(0,0,0, el.clientHeight || 120); grad.addColorStop(0,'rgba(34,197,94,0.15)'); grad.addColorStop(1,'rgba(34,197,94,0)');
+    charts.dayStandalone = new Chart(ctx, { type:'line', data:{ labels: trades.map(function(t){ var dt=new Date(t.endTime||t.startTime); return dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }), datasets:[{ data:pnlCurve, borderColor:'#22d3ee', backgroundColor:grad, tension:0.35, borderWidth:2 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales:{ x:{ grid:{ color:'rgba(148,163,184,0.2)' } }, y:{ grid:{ color:'rgba(148,163,184,0.2)' } } } } });
+    window.__dayStandaloneResize = function(){ computeHeight(); if (charts.dayStandalone) charts.dayStandalone.resize(); };
+    window.addEventListener('resize', window.__dayStandaloneResize);
+} catch(e){} }
