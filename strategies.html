@@ -46,10 +46,14 @@
             </div>
         <div class="upload-section" id="strategiesSection" style="background: var(--card-bg); padding: 15px; border-radius: 8px; margin-top: 10px;">
             <div class="form-group"><label>Nome</label><input type="text" id="strategyName"></div>
-            <div class="form-group"><label>Timeframe</label><input type="text" id="strategyTimeframe"></div>
-            <div class="form-group"><label>Risco/Recompensa Esperado</label><input type="number" id="strategyRR" step="0.01"></div>
             <div class="form-group"><label>Descrição</label><input type="text" id="strategyDescription"></div>
-            <button class="btn btn-primary" onclick="handleCreateStrategy()">Criar Estratégia</button>
+            <h3 style="margin-top:10px;">Regras de Entrada</h3>
+            <div id="entryRulesList" style="margin:8px 0;"></div>
+            <button class="btn btn-secondary" onclick="addEntryRule()">+ Adicionar Regra</button>
+            <h3 style="margin-top:16px;">Regras de Saída</h3>
+            <div id="exitRulesList" style="margin:8px 0;"></div>
+            <button class="btn btn-secondary" onclick="addExitRule()">+ Adicionar Regra</button>
+            <button class="btn btn-primary" style="margin-top:12px;" onclick="handleCreateStrategy()">Criar Estratégia</button>
             <div id="strategyMessage" style="margin-top:8px;"></div>
         </div>
 
@@ -59,9 +63,8 @@
                 <thead>
                     <tr>
                         <th style="background: var(--surface); padding: 12px; text-align:left; border-bottom: 2px solid #334155; color: var(--text);">Nome</th>
-                        <th style="background: var(--surface); padding: 12px; text-align:left; border-bottom: 2px solid #334155; color: var(--text);">Timeframe</th>
-                        <th style="background: var(--surface); padding: 12px; text-align:left; border-bottom: 2px solid #334155; color: var(--text);">RR Esperado</th>
                         <th style="background: var(--surface); padding: 12px; text-align:left; border-bottom: 2px solid #334155; color: var(--text);">Descrição</th>
+                        <th style="background: var(--surface); padding: 12px; text-align:left; border-bottom: 2px solid #334155; color: var(--text);">Regras (E/S)</th>
                         <th style="background: var(--surface); padding: 12px; text-align:left; border-bottom: 2px solid #334155; color: var(--text);">Ações</th>
                     </tr>
                 </thead>

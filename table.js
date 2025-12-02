@@ -88,6 +88,7 @@ function showTradeDetails(idx) {
     const pnlColor = pnlValue >= 0 ? '#4CAF50' : '#f44336';
     document.getElementById('detailPnL').innerHTML = '<span style="color: ' + pnlColor + ';">$' + selectedTrade.pnlDollars + '</span>';
     populateOperationsTable();
+    renderValidationForSelectedTrade();
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -150,6 +151,41 @@ async function populateOperationsTable() {
 }
 
 function closeTradeDetails() { document.getElementById('tradeDetails').style.display = 'none'; selectedTrade = null; selectedTradeOperations = []; }
+
+async function renderValidationForSelectedTrade(){
+    try {
+        const card = document.getElementById('tradeDetails'); if (!card || !selectedTrade) return;
+        const contId = 'tradeValidationSection'; let cont = document.getElementById(contId);
+        if (!cont) { cont = document.createElement('div'); cont.id = contId; cont.style.marginTop = '16px'; cont.style.background = 'var(--card-bg)'; cont.style.padding = '16px'; cont.style.borderRadius = '8px'; card.appendChild(cont); }
+        const sid = selectedTrade.strategy_id;
+        const strat = (allStrategies || []).find(function(s){ return String(s.id) === String(sid); });
+        if (!sid || !strat) { cont.innerHTML = '<div class="loading">Sem estratégia associada para validação</div>'; return; }
+        const nome = strat.name || '-';
+        const entradas = Array.isArray(strat.regras_entrada) ? strat.regras_entrada : [];
+        const saidas = Array.isArray(strat.regras_saida) ? strat.regras_saida : [];
+        const v = await supabaseClient.from('validacoes_trade').select('*').eq('user_id', currentUser.id).eq('trade_id', selectedTrade.id).eq('estrategia_id', sid).limit(1).maybeSingle();
+        const existing = v && v.data ? v.data : null;
+        const entradaChecks = entradas.map(function(r,i){ const checked = false; return '<label style="display:flex; align-items:center; gap:8px; margin:6px 0;"><input type="checkbox" class="valentrada" data-id="'+(r.id||('e'+i))+'"> <span>'+ (r.descricao||('Regra '+(i+1))) +'</span></label>'; }).join('') || '<div style="color:#94a3b8;">Sem regras de entrada</div>';
+        const saidaChecks = saidas.map(function(r,i){ return '<label style="display:flex; align-items:center; gap:8px; margin:6px 0;"><input type="checkbox" class="valsaida" data-id="'+(r.id||('s'+i))+'"> <span>'+ (r.descricao||('Regra '+(i+1))) +'</span></label>'; }).join('') || '<div style="color:#94a3b8;">Sem regras de saída</div>';
+        cont.innerHTML = '<h3 style="margin:0 0 8px 0;">Regras da Estratégia: '+nome+'</h3>'+
+            '<div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px;">'+
+            '<div><strong>Regras de Entrada</strong><div style="margin-top:8px;">'+entradaChecks+'</div></div>'+
+            '<div><strong>Regras de Saída</strong><div style="margin-top:8px;">'+saidaChecks+'</div></div>'+
+            '</div>'+
+            '<div style="margin-top:12px;"><label>Notas (opcional)</label><textarea id="valNotas" rows="3" style="width:100%; padding:8px; border:1px solid var(--grid); border-radius:8px; background: var(--surface); color: var(--text);"></textarea></div>'+
+            '<button class="btn btn-primary" id="btnSalvarValidacao" style="margin-top:10px;">Salvar Validação</button>'+
+            '<div id="valMsg" style="margin-top:8px;"></div>';
+        document.getElementById('btnSalvarValidacao').onclick = async function(){
+            const entradasEl = cont.querySelectorAll('input.valentrada'); const saidasEl = cont.querySelectorAll('input.valsaida');
+            const entradasOk = Array.prototype.every.call(entradasEl, function(el){ return el.checked; });
+            const saidasOk = Array.prototype.every.call(saidasEl, function(el){ return el.checked; });
+            const notas = document.getElementById('valNotas').value || '';
+            const row = { user_id: currentUser.id, trade_id: selectedTrade.id, estrategia_id: sid, regras_entrada_seguidas: entradasOk, regras_saida_seguidas: saidasOk, notas: notas };
+            const up = await supabaseClient.from('validacoes_trade').upsert([row], { onConflict: 'user_id,trade_id,estrategia_id' }).select('id').single();
+            const m = document.getElementById('valMsg'); if (up.error) { m.textContent = up.error.message; m.className = 'error'; } else { m.textContent = 'Validação salva'; m.className = 'success'; }
+        };
+    } catch(e){}
+}
 
 function initHeaderSorting(){
     const headers = document.querySelectorAll('#tradesTable thead th[data-key]');
