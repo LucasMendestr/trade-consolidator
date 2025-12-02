@@ -37,7 +37,7 @@ function populateStrategyFilter() {
     const filter = document.getElementById('strategyFilter');
     if (!filter) return;
     const currentValue = filter.value;
-    filter.innerHTML = '<option value="">Todas as estratégias</option>';
+    filter.innerHTML = '<option value="">Todas as estratégias</option><option value="none">Sem estratégia</option>';
     for (let i = 0; i < (allStrategies || []).length; i++) {
         const s = allStrategies[i];
         filter.innerHTML += '<option value="' + s.id + '">' + s.name + '</option>';
@@ -98,7 +98,10 @@ function filterTrades() {
         const t = allTrades[i];
         const acc = (t.account || '').trim();
         if (accountFilter && acc !== accountFilter) continue;
-        if (strategyFilter && (t.strategy_id || '') !== strategyFilter) continue;
+        if (strategyFilter) {
+            if (strategyFilter === 'none') { if (t.strategy_id) continue; }
+            else { if (String(t.strategy_id || '') !== strategyFilter) continue; }
+        }
         if (instrumentFilter && (t.instrument || '') !== instrumentFilter) continue;
         if (rangeStart || rangeEnd) {
             const endDate = t.endTime ? new Date(t.endTime) : null;
