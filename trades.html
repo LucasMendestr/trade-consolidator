@@ -143,46 +143,6 @@
                 </table>
             </div>
         </div>
-        <div class="filter-section" style="background: var(--card-bg); padding: 15px; border-radius: 8px; margin: 15px 0 20px 0;">
-            <label>🏦 Filtrar por Conta:</label>
-            <select id="accountFilter" onchange="filterTrades()">
-                <option value="">Todas as contas</option>
-            </select>
-            <div style="margin-top:10px;">
-                <label>🧠 Filtrar por Estratégia:</label>
-                <select id="strategyFilter" onchange="filterTrades()">
-                    <option value="">Todas as estratégias</option>
-                </select>
-            </div>
-            <div style="margin-top:10px; display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
-                <div>
-                    <label>🎯 Instrumento:</label>
-                    <select id="instrumentFilter" onchange="filterTrades()">
-                        <option value="">Todos</option>
-                    </select>
-                </div>
-                <div>
-                    <label>📅 Período:</label>
-                    <select id="datePreset" onchange="filterTrades()">
-                        <option value="">Todos</option>
-                        <option value="this_week">Essa semana</option>
-                        <option value="last_week">Semana passada</option>
-                        <option value="this_month">Esse mês</option>
-                        <option value="last_month">Mês passado</option>
-                        <option value="this_year">Esse ano</option>
-                        <option value="last_year">Ano passado</option>
-                    </select>
-                </div>
-                <div>
-                    <label>De:</label>
-                    <input type="date" id="dateFrom" onchange="filterTrades()" style="padding:8px; border:1px solid #334155; border-radius:4px; background: var(--surface); color: var(--text);">
-                </div>
-                <div>
-                    <label>Até:</label>
-                    <input type="date" id="dateTo" onchange="filterTrades()" style="padding:8px; border:1px solid #334155; border-radius:4px; background: var(--surface); color: var(--text);">
-                </div>
-            </div>
-        </div>
         <div id="tableScrollTop" class="scroll-top"><div id="tableScrollTopInner"></div></div>
         <div id="tableScrollBottom" class="scroll-bottom">
                 <table id="tradesTable">
