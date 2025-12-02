@@ -148,17 +148,19 @@
                 <table id="tradesTable">
                 <thead>
                     <tr>
-                        <th>Sel.</th>
-                        <th>Status</th>
-                        <th>Conta</th>
-                        <th>Instrumento</th>
-                        <th>Tipo</th>
-                        <th>Entrada</th>
-                        <th>Saída</th>
-                        <th>Pontos</th>
-                        <th>PnL $</th>
-                        <th>Fechamento</th>
-                        <th>Estratégia</th>
+                        <th role="columnheader" aria-label="Selecionar todos">
+                            <input type="checkbox" id="selectAllHeader" aria-label="Selecionar todos os trades visíveis">
+                        </th>
+                        <th role="columnheader" tabindex="0" data-key="status" aria-sort="none">Status <span class="sort">⇅</span></th>
+                        <th role="columnheader" tabindex="0" data-key="account" aria-sort="none">Conta <span class="sort">⇅</span></th>
+                        <th role="columnheader" tabindex="0" data-key="instrument" aria-sort="none">Instrumento <span class="sort">⇅</span></th>
+                        <th role="columnheader" tabindex="0" data-key="type" aria-sort="none">Tipo <span class="sort">⇅</span></th>
+                        <th role="columnheader" tabindex="0" data-key="avgEntry" aria-sort="none">Entrada <span class="sort">⇅</span></th>
+                        <th role="columnheader" tabindex="0" data-key="avgExit" aria-sort="none">Saída <span class="sort">⇅</span></th>
+                        <th role="columnheader" tabindex="0" data-key="pnlPoints" aria-sort="none">Pontos <span class="sort">⇅</span></th>
+                        <th role="columnheader" tabindex="0" data-key="pnlDollars" aria-sort="none">PnL $ <span class="sort">⇅</span></th>
+                        <th role="columnheader" tabindex="0" data-key="endTime" aria-sort="none">Fechamento <span class="sort">⇅</span></th>
+                        <th role="columnheader" tabindex="0" data-key="strategy" aria-sort="none">Estratégia <span class="sort">⇅</span></th>
                     </tr>
                 </thead>
                 <tbody id="tradesBody">
@@ -167,13 +169,14 @@
             </table>
         </div>
 
-        <div style="margin-top: 15px; background: var(--card-bg); padding: 15px; border-radius: 8px;">
+        <div style="margin-top: 15px; background: var(--card-bg); padding: 15px; border-radius: 8px; display:flex; align-items:center; gap:10px; justify-content:space-between;">
             <label style="margin-right:8px;">Seleção em massa:</label>
             <label style="margin-right:10px;"><input type="checkbox" id="selectAllTrades" onclick="toggleSelectAllTrades(this)"> Selecionar todos</label>
             <select id="bulkStrategySelect" style="padding:8px; border:1px solid #334155; border-radius:4px; background: var(--surface); color: var(--text);">
                 <option value="">Selecione a estratégia</option>
             </select>
             <button class="btn" style="background:#22d3ee; color:#0b1020; margin-left:10px;" onclick="applyStrategyBulk()">Aplicar</button>
+            <div id="selectionCounter" aria-live="polite" style="margin-left:auto; font-size:12px; color:#9ca3af;">Selecionados: 0</div>
         </div>
         </div>
         </main>

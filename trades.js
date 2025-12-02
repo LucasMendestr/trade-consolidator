@@ -432,8 +432,7 @@ async function applyStrategyBulk() {
     if (!supabaseClient || !currentUser) return;
     const bulk = document.getElementById('bulkStrategySelect');
     if (!bulk || !bulk.value) return;
-    const checkboxes = document.querySelectorAll('.trade-select:checked');
-    const ids = Array.prototype.map.call(checkboxes, function(el){ return el.value; }).filter(function(v){ return v; });
+    const ids = Array.from(selectedTradeIds);
     if (ids.length === 0) return;
     const res = await supabaseClient
         .from('trades')
@@ -448,5 +447,12 @@ async function applyStrategyBulk() {
 
 function toggleSelectAllTrades(el) {
     const checks = document.querySelectorAll('.trade-select');
-    for (let i = 0; i < checks.length; i++) { if (!checks[i].disabled) checks[i].checked = el.checked; }
+    selectedTradeIds.clear();
+    for (let i = 0; i < checks.length; i++) {
+        if (checks[i].disabled) continue;
+        checks[i].checked = el.checked;
+        const id = String(checks[i].value || '');
+        if (el.checked && id) selectedTradeIds.add(id);
+    }
+    if (typeof updateSelectionUI === 'function') { updateSelectionUI(); }
 }

@@ -8,3 +8,5 @@ let selectedTradeOperations = [];
 let charts = {};
 let allStrategies = [];
 let strategyNameById = {};
+let tableSort = { key: null, dir: 'asc' };
+let selectedTradeIds = new Set();
