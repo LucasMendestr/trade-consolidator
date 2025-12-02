@@ -225,8 +225,12 @@ h3 { margin: 15px 0 10px 0; font-size: 16px; color: var(--text); }
 .sidebar .btn-upload { display: block; width: 100%; background: var(--accent); color: #fff; font-weight: 700; padding: 10px 12px; border-radius: 8px; text-align: center; }
 .nav-list { list-style: none; }
 .nav-item { margin: 6px 0; }
-.nav-link { display: flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; padding: 10px 12px; border-radius: 8px; }
+.nav-link { display: flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; padding: 10px 12px; border-radius: 8px; position: relative; transition: background-color 0.2s ease, box-shadow 0.2s ease; }
 .nav-link:hover { background: var(--surface); }
+.nav-link.active { background: rgba(34,211,238,0.12); box-shadow: inset 0 0 0 1px var(--accent); }
+.nav-link.active::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 3px; background: var(--accent); }
+.nav-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.nav-link.active .nav-icon { opacity: 1; }
 .nav-icon { width: 20px; text-align: center; opacity: 0.9; }
 .sidebar.collapsed .nav-icon { width: 20px; }
 .sidebar.collapsed .nav-text { display: none; }
