@@ -73,6 +73,7 @@ async function processCSV(csv) {
     let imported = 0; let errors = 0; let duplicates = 0;
     const batchSize = 500; let batch = [];
     const tracker = { parse: 0, validation: 0, normalize: 0, time: 0, insert: 0, other: 0, details: [] };
+    const seenAccounts = {};
     document.getElementById('uploadMessage').innerHTML = '<div class="loading">⏳ Importando...</div>';
     for (let i = 1; i < lines.length; i++) {
         const raw = lines[i]; if (!raw || !raw.trim()) continue;
@@ -102,6 +103,7 @@ async function processCSV(csv) {
                 account: op.Account,
                 source_id: getSourceId(op)
             };
+            if (row.account) { seenAccounts[row.account] = true; }
             batch.push(row);
             if (batch.length >= batchSize) {
                 const result = await dedupAndInsertBatch(batch);
@@ -133,6 +135,10 @@ async function processCSV(csv) {
     setUploadErrorsDownloadLink(tracker);
     try { await consolidateTradesForUserBatch(); } catch (e) {}
     await loadDataFromSupabase();
+    try {
+        const list = Object.keys(seenAccounts);
+        await checkAndRedirectMissingAccounts(list);
+    } catch(e){}
 }
 
 function makeOpKeyFromRow(row) {
@@ -270,4 +276,22 @@ function getSourceId(op) {
     const keys = ['ID','Id','Order','OrderID','Order Id','ExecutionID','ExecID','TradeID','Trade Id'];
     for (let i = 0; i < keys.length; i++) { const v = op[keys[i]]; if (v != null && String(v).trim() !== '') return String(v).trim(); }
     return null;
+}
+
+async function checkAndRedirectMissingAccounts(list) {
+    try {
+        if (!list || list.length === 0) return;
+        const sel = await supabaseClient
+            .from('accounts')
+            .select('account')
+            .eq('user_id', currentUser.id)
+            .in('account', list);
+        const existing = (sel.data || []).map(function(x){ return x.account; });
+        const existSet = {}; for (var i=0;i<existing.length;i++){ existSet[existing[i]] = true; }
+        const missing = []; for (var j=0;j<list.length;j++){ var a=list[j]; if (a && !existSet[a]) missing.push(a); }
+        if (missing.length > 0) {
+            try { localStorage.setItem('pending_accounts', JSON.stringify(missing)); localStorage.setItem('active_nav', 'contas.html'); } catch(e){}
+            window.location.href = 'contas.html';
+        }
+    } catch(e){}
 }

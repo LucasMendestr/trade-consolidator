@@ -56,8 +56,15 @@ async function submitCreateAccount(){
     var res = await supabaseClient.from('accounts').insert([payload]).select('*').single();
     if (res.error) { showFormError(res.error.message); setCreateLoading(false); return; }
     showFormSuccess('Conta criada com sucesso');
-    closeCreateAccountModal();
     await loadAccounts();
+    var pending = getPendingAccounts();
+    if (pending.length && pending[0] === payload.account) { pending.shift(); setPendingAccounts(pending); }
+    if (pending.length > 0) {
+      openCreateAccountModal();
+      try { document.getElementById('accountNumber').value = pending[0] || ''; } catch(e){}
+    } else {
+      closeCreateAccountModal();
+    }
     try {
       document.getElementById('createAccountForm').reset();
     } catch(e){}
@@ -95,3 +102,6 @@ function renderAccountsTable(){
   body.innerHTML = html;
 }
 
+function getPendingAccounts(){ try { var s=localStorage.getItem('pending_accounts'); if(!s) return []; var arr=JSON.parse(s); if(!Array.isArray(arr)) return []; return arr.filter(function(x){ return x && String(x).trim() !== ''; }); } catch(e){ return []; } }
+function setPendingAccounts(arr){ try { localStorage.setItem('pending_accounts', JSON.stringify(arr || [])); } catch(e){} }
+function initPendingAccountsFlow(){ var arr = getPendingAccounts(); if (arr.length > 0) { openCreateAccountModal(); try { document.getElementById('accountNumber').value = arr[0] || ''; } catch(e){} } }
