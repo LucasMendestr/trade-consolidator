@@ -13,32 +13,7 @@
 </head>
 <body>
     <div class="layout">
-        <aside id="sidebar" class="sidebar">
-            <div class="sidebar-header">
-                <div class="sidebar-brand">
-                    <span class="brand-logo" title="Trade Consolidator">
-                        <svg class="logo-svg" viewBox="0 0 24 24" aria-hidden="true">
-                            <rect x="3" y="12" width="4" height="9" rx="1"></rect>
-                            <rect x="10" y="7" width="4" height="14" rx="1"></rect>
-                            <rect x="17" y="3" width="4" height="18" rx="1"></rect>
-                        </svg>
-                    </span>
-                    <span class="brand-name">Trade Consolidator</span>
-                </div>
-                <button id="sidebarToggle" class="sidebar-toggle">≪</button>
-            </div>
-            <div class="sidebar-actions">
-                <button class="btn btn-upload" onclick="openUploadModal()">+ Upload CSV</button>
-            </div>
-            <ul class="nav-list">
-                <li class="nav-item"><a class="nav-link" href="dashboard.html"><span class="nav-icon">📊</span><span class="nav-text">Dashboard</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="trades.html"><span class="nav-icon">📋</span><span class="nav-text">Trades</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="strategies.html"><span class="nav-icon">🧠</span><span class="nav-text">Estratégias</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="diario.html"><span class="nav-icon">📓</span><span class="nav-text">Diário</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="reportes.html"><span class="nav-icon">📈</span><span class="nav-text">Reportes</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="playbook.html"><span class="nav-icon">📘</span><span class="nav-text">Playbook</span></a></li>
-            </ul>
-        </aside>
+        <aside id="sidebar" class="sidebar"></aside>
         <main class="main">
         <div class="app-container">
             <div class="app-header">
@@ -183,9 +158,7 @@
     </div>
     <script>
     (function(){
-        var btn = document.getElementById('sidebarToggle');
-        var sb = document.getElementById('sidebar');
-        if (btn && sb) { btn.addEventListener('click', function(){ sb.classList.toggle('collapsed'); document.body.classList.toggle('sidebar-collapsed'); }); }
+        // handled in nav.js
     })();
     function openUploadModal(){ var m = document.getElementById('uploadModal'); var b = document.getElementById('modalBackdrop'); if (m && b) { m.classList.add('open'); b.classList.add('open'); } }
     function closeUploadModal(){ var m = document.getElementById('uploadModal'); var b = document.getElementById('modalBackdrop'); if (m && b) { m.classList.remove('open'); b.classList.remove('open'); } }
@@ -204,6 +177,7 @@
     <script src="globals.js"></script>
     <script src="supabase-init.js"></script>
     <script src="theme.js"></script>
+    <script src="nav.js"></script>
     <script src="strategies.js"></script>
     <script src="trades.js"></script>
     <script src="dashboard-charts.js"></script>

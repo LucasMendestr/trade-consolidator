@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contas • Trade Consolidator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+</head>
+<body>
+  <div class="layout">
+    <aside id="sidebar" class="sidebar"></aside>
+    <main class="main">
+      <div class="app-container">
+        <div class="app-header" style="align-items:center; gap:12px; justify-content:space-between;">
+          <h1 style="margin:0;">Contas</h1>
+          <button id="btnOpenCreateAccount" class="btn btn-primary" onclick="openCreateAccountModal()">Criar Conta</button>
+        </div>
+        <div id="accountsSection" class="upload-section" style="margin-top:0;">
+          <div id="accountsMessage" style="min-height:20px;"></div>
+          <div style="overflow-x:auto;">
+            <table id="accountsTable">
+              <thead>
+                <tr>
+                  <th>Nome da Conta</th>
+                  <th>Tipo</th>
+                  <th>Saldo</th>
+                  <th>Data de Criação</th>
+                </tr>
+              </thead>
+              <tbody id="accountsBody">
+                <tr><td colspan="4" class="loading">Nenhuma conta</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="modalBackdrop" class="modal-backdrop"></div>
+  <div id="createAccountModal" class="modal">
+    <div class="modal-card">
+      <div class="modal-header"><strong>🏦 Criar Conta</strong><button class="close-btn" onclick="closeCreateAccountModal()">✕</button></div>
+      <form id="createAccountForm" onsubmit="return false;">
+        <div class="form-group"><label>Prop Firm Name</label><input type="text" id="propFirmName" placeholder="Ex: FTMO"></div>
+        <div class="form-group"><label>Número da Conta</label><input type="text" id="accountNumber" placeholder="Ex: 123456"></div>
+        <div class="form-group"><label>Status</label>
+          <select id="accountStatus">
+            <option value="">Selecione</option>
+            <option value="perfacc">perfacc</option>
+            <option value="test">test</option>
+            <option value="lost">lost</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Tipo</label>
+          <select id="accountType">
+            <option value="">Selecione</option>
+            <option value="cfds">CFDs</option>
+            <option value="forex">Forex</option>
+            <option value="futures">Futures</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Saldo Inicial</label><input type="number" id="initialBal" step="0.01" placeholder="0.00"></div>
+        <div class="form-group"><label>Investimento (custo de aquisição)</label><input type="number" id="investment" step="0.01" placeholder="0.00"></div>
+        <div class="form-group"><label>Withdrawals</label><input type="number" id="withdrawals" step="0.01" placeholder="0.00"></div>
+        <div class="form-group"><label>Profit/Loss</label><input type="number" id="profitLoss" step="0.01" placeholder="0.00"></div>
+        <div class="form-group"><label>Rules</label><input type="text" id="rules" placeholder="Regras"></div>
+        <div class="form-group"><label>Platform</label><input type="text" id="platform" placeholder="Ex: NinjaTrader"></div>
+        <div id="createAccountError" class="error" style="display:none;"></div>
+        <div id="createAccountSuccess" class="success" style="display:none;"></div>
+        <div class="modal-footer">
+          <button id="btnCreateAccount" class="btn btn-primary" onclick="submitCreateAccount()">Criar</button>
+          <button class="btn btn-secondary" onclick="closeCreateAccountModal()">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="uploadModal" class="modal">
+    <div class="modal-card">
+      <div class="modal-header"><strong>📤 Importar CSV</strong><button class="close-btn" onclick="closeUploadModal()">✕</button></div>
+      <div>
+        <input type="file" id="csvFileModal" accept=".csv" style="display:none" onchange="handleFileUpload(event)">
+        <button class="btn btn-primary" onclick="document.getElementById('csvFileModal').click()">Selecionar arquivo CSV</button>
+        <div id="uploadMessage" style="margin-top:8px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeUploadModal()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function openUploadModal(){ var m=document.getElementById('uploadModal'); var b=document.getElementById('modalBackdrop'); if(m&&b){ m.classList.add('open'); b.classList.add('open'); } }
+    function closeUploadModal(){ var m=document.getElementById('uploadModal'); var b=document.getElementById('modalBackdrop'); if(m&&b){ m.classList.remove('open'); b.classList.remove('open'); } }
+  </script>
+  <script src="globals.js"></script>
+  <script src="supabase-init.js"></script>
+  <script src="theme.js"></script>
+  <script src="nav.js"></script>
+  <script src="accounts.js"></script>
+  <script src="main.js"></script>
+  <script>
+    window.addEventListener('load', function(){ try { loadAccounts(); } catch(e){} });
+  </script>
+</body>
+</html>
+
