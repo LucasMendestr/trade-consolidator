@@ -46,30 +46,32 @@
     <div class="modal-card">
       <div class="modal-header"><strong>🏦 Criar Conta</strong><button class="close-btn" onclick="closeCreateAccountModal()">✕</button></div>
       <form id="createAccountForm" onsubmit="return false;">
-        <div class="form-group"><label>Prop Firm Name</label><input type="text" id="propFirmName" placeholder="Ex: FTMO"></div>
-        <div class="form-group"><label>Número da Conta</label><input type="text" id="accountNumber" placeholder="Ex: 123456"></div>
-        <div class="form-group"><label>Status</label>
-          <select id="accountStatus">
-            <option value="">Selecione</option>
-            <option value="perfacc">perfacc</option>
-            <option value="test">test</option>
-            <option value="lost">lost</option>
-          </select>
+        <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+          <div class="form-group"><label>Prop Firm Name</label><input type="text" id="propFirmName" placeholder="Ex: FTMO"></div>
+          <div class="form-group"><label>Número da Conta</label><input type="text" id="accountNumber" placeholder="Ex: 123456"></div>
+          <div class="form-group"><label>Status</label>
+            <select id="accountStatus">
+              <option value="">Selecione</option>
+              <option value="perfacc">perfacc</option>
+              <option value="test">test</option>
+              <option value="lost">lost</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Tipo</label>
+            <select id="accountType">
+              <option value="">Selecione</option>
+              <option value="cfds">CFDs</option>
+              <option value="forex">Forex</option>
+              <option value="futures">Futures</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Saldo Inicial</label><input type="number" id="initialBal" step="0.01" placeholder="0.00"></div>
+          <div class="form-group"><label>Investimento (custo de aquisição)</label><input type="number" id="investment" step="0.01" placeholder="0.00"></div>
+          <div class="form-group"><label>Withdrawals</label><input type="number" id="withdrawals" step="0.01" placeholder="0.00"></div>
+          <div class="form-group"><label>Profit/Loss</label><input type="number" id="profitLoss" step="0.01" placeholder="0.00"></div>
+          <div class="form-group" style="grid-column: span 2;"><label>Rules</label><input type="text" id="rules" placeholder="Regras"></div>
+          <div class="form-group" style="grid-column: span 2;"><label>Platform</label><input type="text" id="platform" placeholder="Ex: NinjaTrader"></div>
         </div>
-        <div class="form-group"><label>Tipo</label>
-          <select id="accountType">
-            <option value="">Selecione</option>
-            <option value="cfds">CFDs</option>
-            <option value="forex">Forex</option>
-            <option value="futures">Futures</option>
-          </select>
-        </div>
-        <div class="form-group"><label>Saldo Inicial</label><input type="number" id="initialBal" step="0.01" placeholder="0.00"></div>
-        <div class="form-group"><label>Investimento (custo de aquisição)</label><input type="number" id="investment" step="0.01" placeholder="0.00"></div>
-        <div class="form-group"><label>Withdrawals</label><input type="number" id="withdrawals" step="0.01" placeholder="0.00"></div>
-        <div class="form-group"><label>Profit/Loss</label><input type="number" id="profitLoss" step="0.01" placeholder="0.00"></div>
-        <div class="form-group"><label>Rules</label><input type="text" id="rules" placeholder="Regras"></div>
-        <div class="form-group"><label>Platform</label><input type="text" id="platform" placeholder="Ex: NinjaTrader"></div>
         <div id="createAccountError" class="error" style="display:none;"></div>
         <div id="createAccountSuccess" class="success" style="display:none;"></div>
         <div class="modal-footer">
@@ -109,4 +111,3 @@
   </script>
 </body>
 </html>
-
