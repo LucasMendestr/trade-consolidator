@@ -8,6 +8,7 @@ window.addEventListener('load', async function() {
             currentUser = r.data.user;
             await loadDataFromSupabase();
             await loadStrategies();
+            try { if (typeof loadAccounts === 'function') { await loadAccounts(); } } catch(e){}
         }
     } catch (e) {}
 });
