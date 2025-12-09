@@ -50,6 +50,7 @@ async function submitCreateAccount(){
       investment: parseFloat(document.getElementById('investment').value || '0') || 0,
       withdrawals: parseFloat(document.getElementById('withdrawals').value || '0') || 0,
       profit_loss: parseFloat(document.getElementById('profitLoss').value || '0') || 0,
+      drawdown: parseFloat(document.getElementById('drawdown').value || '0') || 0,
       rules: (document.getElementById('rules').value || '').trim(),
       platform: (document.getElementById('platform').value || '').trim()
     };

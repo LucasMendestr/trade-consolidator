@@ -74,6 +74,12 @@ async function processCSV(csv) {
     const batchSize = 500; let batch = [];
     const tracker = { parse: 0, validation: 0, normalize: 0, time: 0, insert: 0, other: 0, details: [] };
     const seenAccounts = {};
+    const accountIdByNumber = {};
+    try {
+        const accRes = await supabaseClient.from('accounts').select('id,account').eq('user_id', currentUser.id);
+        const accRows = accRes.data || [];
+        for (let i = 0; i < accRows.length; i++) { accountIdByNumber[String(accRows[i].account || '')] = accRows[i].id; }
+    } catch(e){}
     document.getElementById('uploadMessage').innerHTML = '<div class="loading">⏳ Importando...</div>';
     for (let i = 1; i < lines.length; i++) {
         const raw = lines[i]; if (!raw || !raw.trim()) continue;
@@ -100,10 +106,11 @@ async function processCSV(csv) {
                 e_x: op['E/X'],
                 position: op.Position,
                 commission: com,
-                account: op.Account,
+                account_id: accountIdByNumber[String(op.Account || '')] || null,
                 source_id: getSourceId(op)
             };
-            if (row.account) { seenAccounts[row.account] = true; }
+            if (op.Account) { seenAccounts[op.Account] = true; }
+            if (!row.account_id) { tracker.other++; tracker.details.push({ line: i, type: 'account_missing', message: 'Conta não cadastrada: ' + String(op.Account || ''), raw: raw }); continue; }
             batch.push(row);
             if (batch.length >= batchSize) {
                 const result = await dedupAndInsertBatch(batch);
@@ -141,23 +148,23 @@ async function processCSV(csv) {
     } catch(e){}
 }
 
-function makeOpKeyFromRow(row) {
-    const q = parseFloat(row.quantity || 0).toFixed(6);
-    const p = parseFloat(row.price || 0).toFixed(6);
-    const c = parseFloat(row.commission || 0).toFixed(6);
-    const sid = row.source_id || '';
-    return sid ? ('SID|' + sid) : ((row.instrument || '') + '|' + (row.action || '') + '|' + (row.account || '') + '|' + (row.e_x || '') + '|' + (row.position || '') + '|' + q + '|' + p + '|' + c + '|' + (row.time || ''));
-}
+    function makeOpKeyFromRow(row) {
+        const q = parseFloat(row.quantity || 0).toFixed(6);
+        const p = parseFloat(row.price || 0).toFixed(6);
+        const c = parseFloat(row.commission || 0).toFixed(6);
+        const sid = row.source_id || '';
+        return sid ? ('SID|' + sid) : ((row.instrument || '') + '|' + (row.action || '') + '|' + (row.account_id || '') + '|' + (row.e_x || '') + '|' + (row.position || '') + '|' + q + '|' + p + '|' + c + '|' + (row.time || ''));
+    }
 
-function makeOpKeyFromDb(op) {
-    const q = parseFloat(op.quantity || 0).toFixed(6);
-    const p = parseFloat(op.price || 0).toFixed(6);
-    const c = parseFloat(op.commission || 0).toFixed(6);
-    const sid = op.source_id || '';
-    if (sid) return 'SID|' + sid;
-    const t = new Date(op.time).toISOString();
-    return (op.instrument || '') + '|' + (op.action || '') + '|' + (op.account || '') + '|' + (op.e_x || '') + '|' + (op.position || '') + '|' + q + '|' + p + '|' + c + '|' + t;
-}
+    function makeOpKeyFromDb(op) {
+        const q = parseFloat(op.quantity || 0).toFixed(6);
+        const p = parseFloat(op.price || 0).toFixed(6);
+        const c = parseFloat(op.commission || 0).toFixed(6);
+        const sid = op.source_id || '';
+        if (sid) return 'SID|' + sid;
+        const t = new Date(op.time).toISOString();
+        return (op.instrument || '') + '|' + (op.action || '') + '|' + (op.account_id || '') + '|' + (op.e_x || '') + '|' + (op.position || '') + '|' + q + '|' + p + '|' + c + '|' + t;
+    }
 
 async function dedupAndInsertBatch(batch) {
     try {
@@ -204,20 +211,20 @@ async function dedupAndInsertBatch(batch) {
             if (res.error) { return { inserted: 0, duplicates: duplicates, errors: toInsert.length, errorDetails: [{ line: null, type: 'insert', message: res.error.message }] }; }
             return { inserted: toInsert.length, duplicates: duplicates, errors: 0, errorDetails: [] };
         }
-        const accountsSet = {}; for (let i = 0; i < batch.length; i++) { const acc = batch[i].account || ''; if (acc) accountsSet[acc] = true; }
-        const accounts = Object.keys(accountsSet);
+        const accountIdsSet = {}; for (let i = 0; i < batch.length; i++) { const acc = batch[i].account_id || ''; if (acc) accountIdsSet[acc] = true; }
+        const accountIds = Object.keys(accountIdsSet);
         const minIso = new Date(minTime).toISOString();
         const maxIso = new Date(maxTime).toISOString();
         let existingKeys = {};
         if (instruments.length > 0) {
             let query = supabaseClient
                 .from('operations')
-                .select('instrument,action,account,e_x,position,quantity,price,commission,time,source_id')
+                .select('instrument,action,account_id,e_x,position,quantity,price,commission,time,source_id')
                 .eq('user_id', currentUser.id)
                 .in('instrument', instruments)
                 .gte('time', minIso)
                 .lte('time', maxIso);
-            if (accounts.length > 0) { query = query.in('account', accounts); }
+            if (accountIds.length > 0) { query = query.in('account_id', accountIds); }
             const sel = await query;
             const existing = sel.data || [];
             for (let i = 0; i < existing.length; i++) { existingKeys[makeOpKeyFromDb(existing[i])] = true; }
