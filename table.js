@@ -103,7 +103,7 @@ async function populateOperationsTable() {
             .select('*')
             .eq('user_id', currentUser.id)
             .eq('instrument', selectedTrade.instrument)
-            .eq('account', selectedTrade.account)
+            .eq('account_id', selectedTrade.accountId)
             .gte('time', selectedTrade.startTime)
             .lte('time', selectedTrade.endTime)
             .order('time');

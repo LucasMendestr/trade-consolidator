@@ -75,6 +75,7 @@ async function processCSV(csv) {
     const tracker = { parse: 0, validation: 0, normalize: 0, time: 0, insert: 0, other: 0, details: [] };
     const seenAccounts = {};
     const accountIdByNumber = {};
+    const rawRows = [];
     try {
         const accRes = await supabaseClient.from('accounts').select('id,account').eq('user_id', currentUser.id);
         const accRows = accRes.data || [];
@@ -106,19 +107,56 @@ async function processCSV(csv) {
                 e_x: op['E/X'],
                 position: op.Position,
                 commission: com,
-                account_id: accountIdByNumber[String(op.Account || '')] || null,
+                account_id: null,
+                account_number: String(op.Account || ''),
                 source_id: getSourceId(op)
             };
-            if (op.Account) { seenAccounts[op.Account] = true; }
-            if (!row.account_id) { tracker.other++; tracker.details.push({ line: i, type: 'account_missing', message: 'Conta não cadastrada: ' + String(op.Account || ''), raw: raw }); continue; }
-            batch.push(row);
-            if (batch.length >= batchSize) {
-                const result = await dedupAndInsertBatch(batch);
-                imported += result.inserted; duplicates += result.duplicates; errors += result.errors;
-                if (result.errorDetails && result.errorDetails.length > 0) { for (let k = 0; k < result.errorDetails.length; k++) tracker.details.push(result.errorDetails[k]); tracker.insert += result.errors; }
-                batch = [];
-            }
+            if (row.account_number) { seenAccounts[row.account_number] = true; }
+            rawRows.push(row);
         } catch (err) { errors++; tracker.parse++; tracker.details.push({ line: i, type: 'parse', message: err && err.message ? err.message : 'Falha ao processar linha', raw: raw }); }
+    }
+    const allAccountsInFile = Object.keys(seenAccounts);
+    const missingAccounts = [];
+    for (let i = 0; i < allAccountsInFile.length; i++) { const a = allAccountsInFile[i]; if (!accountIdByNumber[a]) missingAccounts.push(a); }
+    if (missingAccounts.length > 0) {
+        const toCreate = missingAccounts.map(function(acc){ return {
+            user_id: currentUser.id,
+            account: acc,
+            prop_firm_name: acc,
+            status: 'test',
+            type: 'forwardtest',
+            initial_bal: 0,
+            investment: 0,
+            withdrawals: 0,
+            profit_loss: 0,
+            drawdown: 0,
+            rules: '',
+            platform: ''
+        }; });
+        try {
+            const up = await supabaseClient
+                .from('accounts')
+                .upsert(toCreate, { onConflict: 'account', returning: 'minimal' });
+            if (up && up.error) { tracker.other++; tracker.details.push({ line: null, type: 'account_create_error', message: up.error.message }); }
+        } catch(e){ tracker.other++; tracker.details.push({ line: null, type: 'account_create_error', message: e && e.message ? e.message : 'Falha ao criar contas' }); }
+        await new Promise(function(res){ setTimeout(res, 1000); });
+        try {
+            const accRes2 = await supabaseClient.from('accounts').select('id,account').eq('user_id', currentUser.id);
+            const accRows2 = accRes2.data || [];
+            for (let i = 0; i < accRows2.length; i++) { accountIdByNumber[String(accRows2[i].account || '')] = accRows2[i].id; }
+        } catch(e){}
+    }
+    for (let i = 0; i < rawRows.length; i++) {
+        const r = rawRows[i];
+        r.account_id = accountIdByNumber[r.account_number] || null;
+        if (!r.account_id) { tracker.other++; tracker.details.push({ line: null, type: 'account_missing_after_create', message: 'Conta não cadastrada após criação: ' + String(r.account_number || '') }); continue; }
+        batch.push({ user_id: r.user_id, instrument: r.instrument, action: r.action, quantity: r.quantity, price: r.price, time: r.time, e_x: r.e_x, position: r.position, commission: r.commission, account_id: r.account_id, source_id: r.source_id });
+        if (batch.length >= batchSize) {
+            const result = await dedupAndInsertBatch(batch);
+            imported += result.inserted; duplicates += result.duplicates; errors += result.errors;
+            if (result.errorDetails && result.errorDetails.length > 0) { for (let k = 0; k < result.errorDetails.length; k++) tracker.details.push(result.errorDetails[k]); tracker.insert += result.errors; }
+            batch = [];
+        }
     }
     if (batch.length > 0) {
         const result = await dedupAndInsertBatch(batch);
@@ -142,10 +180,6 @@ async function processCSV(csv) {
     setUploadErrorsDownloadLink(tracker);
     try { await consolidateTradesForUserBatch(); } catch (e) {}
     await loadDataFromSupabase();
-    try {
-        const list = Object.keys(seenAccounts);
-        await checkAndRedirectMissingAccounts(list);
-    } catch(e){}
 }
 
     function makeOpKeyFromRow(row) {
