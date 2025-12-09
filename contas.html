@@ -25,6 +25,7 @@
             <table id="accountsTable">
               <thead>
                 <tr>
+                  <th>Ações</th>
                   <th>Nome da Conta</th>
                   <th>Tipo</th>
                   <th>Saldo</th>
@@ -109,7 +110,7 @@
   <script src="accounts.js"></script>
   <script src="main.js"></script>
   <script>
-    window.addEventListener('load', function(){ try { loadAccounts(); initPendingAccountsFlow(); } catch(e){} });
+    window.addEventListener('load', function(){ try { loadAccounts(); } catch(e){} });
   </script>
 </body>
 </html>
