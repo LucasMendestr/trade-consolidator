@@ -134,7 +134,7 @@ async function processCSV(csv) {
         try {
             const up = await supabaseClient
                 .from('accounts')
-                .upsert(toCreate, { onConflict: 'account', returning: 'minimal' });
+                .upsert(toCreate, { onConflict: 'user_id,account', returning: 'minimal' });
             if (up && up.error) { tracker.other++; tracker.details.push({ line: null, type: 'account_create_error', message: up.error.message }); }
         } catch(e){ tracker.other++; tracker.details.push({ line: null, type: 'account_create_error', message: e && e.message ? e.message : 'Falha ao criar contas' }); }
         await new Promise(function(res){ setTimeout(res, 1000); });
@@ -176,7 +176,8 @@ async function processCSV(csv) {
         '<div id="uploadErrorsPanel" style="display:none; margin-top:10px; background: #1f2937; color:#e5e7eb; padding:10px; border-radius:4px; max-height:280px; overflow:auto;"></div>';
     document.getElementById('uploadMessage').innerHTML = statusHtml;
     setUploadErrorsDownloadLink(tracker);
-    try { await consolidateTradesForUserBatch(); } catch (e) {}
+    try { await new Promise(function(res){ setTimeout(res, 300); }); await consolidateTradesForUserBatch(); } catch (e) {}
+    try { await consolidateTradesForUser(); } catch(e){}
     await loadDataFromSupabase();
 }
 
