@@ -384,28 +384,33 @@ async function consolidateTradesForUserBatch() {
     }
     console.log('[consolidateTradesForUserBatch] updates prepared', updates.length);
 
-    const assignRows = [];
+    const assignBySeq = {};
     for (let i = 0; i < seqAssignments.length; i++) {
         const s = seqAssignments[i];
         if (s.seq == null) continue;
-        for (let k = 0; k < (s.opIds || []).length; k++) { assignRows.push({ id: s.opIds[k], user_id: currentUser.id, trade_seq: s.seq }); }
+        if (!assignBySeq[s.seq]) assignBySeq[s.seq] = [];
+        for (let k = 0; k < (s.opIds || []).length; k++) { assignBySeq[s.seq].push(s.opIds[k]); }
     }
     const assignChunk = 500;
     let opsSeqSetTotal = 0;
-    for (let start = 0; start < assignRows.length; start += assignChunk) {
-        const part = assignRows.slice(start, start + assignChunk);
-        const r = await supabaseClient
-            .from('operations')
-            .upsert(part, { onConflict: 'id', returning: 'minimal' });
-        if (r && r.error) console.error('[consolidateTradesForUserBatch] upsert trade_seq chunk error', r.error.message);
-        opsSeqSetTotal += part.length;
-        console.log('[consolidateTradesForUserBatch] trade_seq upsert chunk', { rows: part.length });
+    for (const seqKey in assignBySeq) {
+        const ids = assignBySeq[seqKey];
+        for (let start = 0; start < ids.length; start += assignChunk) {
+            const part = ids.slice(start, start + assignChunk);
+            const r = await supabaseClient
+                .from('operations')
+                .update({ trade_seq: parseInt(seqKey, 10) })
+                .in('id', part)
+                .eq('user_id', currentUser.id)
+                .select('id');
+            if (r && r.error) console.error('[consolidateTradesForUserBatch] update trade_seq chunk error', r.error.message);
+            opsSeqSetTotal += part.length;
+            console.log('[consolidateTradesForUserBatch] trade_seq update chunk', { rows: part.length, seq: seqKey });
+        }
     }
     console.log('[consolidateTradesForUserBatch] trade_seq set total', opsSeqSetTotal);
 
-    const uniqueSeqs = {};
-    for (let i = 0; i < seqAssignments.length; i++) { if (seqAssignments[i].seq != null) uniqueSeqs[seqAssignments[i].seq] = true; }
-    const seqList = Object.keys(uniqueSeqs).map(function(x){ return parseInt(x,10); });
+    const seqList = Object.keys(assignBySeq).map(function(x){ return parseInt(x,10); });
     const rpcChunk = 500;
     let opsLinkedByRpcTotal = 0;
     for (let start = 0; start < seqList.length; start += rpcChunk) {
@@ -418,6 +423,31 @@ async function consolidateTradesForUserBatch() {
     }
     const linkLogs = [];
     let opsUpdatedTotal = opsLinkedByRpcTotal; let opsUpdatedByIds = 0; let opsUpdatedBySource = 0; let opsUpdatedByRange = 0;
+    if (opsLinkedByRpcTotal === 0) {
+        const updatesByTrade = {};
+        for (let i = 0; i < updates.length; i++) {
+            const u = updates[i];
+            if (!updatesByTrade[u.tradeId]) updatesByTrade[u.tradeId] = [];
+            for (let k = 0; k < (u.opIds || []).length; k++) { updatesByTrade[u.tradeId].push(u.opIds[k]); }
+        }
+        const updChunk = 500;
+        for (const tId in updatesByTrade) {
+            const ids = updatesByTrade[tId];
+            for (let start = 0; start < ids.length; start += updChunk) {
+                const part = ids.slice(start, start + updChunk);
+                const r = await supabaseClient
+                    .from('operations')
+                    .update({ trade_id: tId })
+                    .in('id', part)
+                    .eq('user_id', currentUser.id)
+                    .select('id');
+                if (r && r.error) { console.error('[consolidateTradesForUserBatch] update trade_id by ids error', r.error.message); continue; }
+                opsUpdatedByIds += part.length;
+                console.log('[consolidateTradesForUserBatch] update trade_id chunk', { rows: part.length, tradeId: tId });
+            }
+        }
+        opsUpdatedTotal += opsUpdatedByIds;
+    }
     const insertedCount = Object.keys(tradeIdByKey).length;
     let linkedOps = 0; for (let i = 0; i < updates.length; i++) { linkedOps += (updates[i].opIds || []).length; }
     console.log('[consolidateTradesForUserBatch] summary', { tradesInserted: insertedCount, tradesDuplicates: (candidates.length - insertedCount), opsUpdatedTotal, opsRequested: linkedOps, byIds: opsUpdatedByIds, bySource: opsUpdatedBySource, byRange: opsUpdatedByRange });
