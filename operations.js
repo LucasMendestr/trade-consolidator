@@ -97,20 +97,35 @@ async function processCSV(csv) {
             if (isNaN(qty)) { tracker.normalize++; tracker.details.push({ line: i, type: 'normalize', message: 'Quantidade inválida: ' + op.Quantity, raw: raw }); continue; }
             if (isNaN(prc)) { tracker.normalize++; tracker.details.push({ line: i, type: 'normalize', message: 'Preço inválido: ' + op.Price, raw: raw }); continue; }
             if (isNaN(com)) { tracker.normalize++; tracker.details.push({ line: i, type: 'normalize', message: 'Comissão inválida: ' + op.Commission, raw: raw }); continue; }
+            function normalizeEX(v) {
+                const s = String(v || '').trim().toLowerCase();
+                if (!s) return null;
+                if (s === 'e' || s === 'entry' || s === 'entrada') return 'Entry';
+                if (s === 'x' || s === 'exit' || s === 'saida' || s === 'saída') return 'Exit';
+                return s.indexOf('entr') !== -1 ? 'Entry' : (s.indexOf('exit') !== -1 || s.indexOf('sai') !== -1 ? 'Exit' : null);
+            }
+            function normalizeAction(v) {
+                const s = String(v || '').trim().toLowerCase();
+                if (!s) return '';
+                if (s === 'b' || s === 'buy' || s === 'long') return 'Buy';
+                if (s === 's' || s === 'sell' || s === 'short') return 'Sell';
+                return s.charAt(0) === 'b' ? 'Buy' : (s.charAt(0) === 's' ? 'Sell' : String(v || ''));
+            }
             const row = {
                 user_id: currentUser.id,
                 instrument: op.Instrument,
-                action: op.Action,
+                action: normalizeAction(op.Action),
                 quantity: qty,
                 price: prc,
                 time: toIsoUTC(op.Time),
-                e_x: op['E/X'],
+                e_x: normalizeEX(op['E/X']),
                 position: op.Position,
                 commission: com,
                 account_id: null,
                 account_number: String(op.Account || ''),
                 source_id: getSourceId(op)
             };
+            if (!row.e_x) { tracker.validation++; tracker.details.push({ line: i, type: 'validation', message: 'E/X inválido: ' + String(op['E/X'] || ''), raw: raw }); continue; }
             if (row.account_number) { seenAccounts[row.account_number] = true; }
             rawRows.push(row);
         } catch (err) { errors++; tracker.parse++; tracker.details.push({ line: i, type: 'parse', message: err && err.message ? err.message : 'Falha ao processar linha', raw: raw }); }
@@ -119,6 +134,7 @@ async function processCSV(csv) {
     const missingAccounts = [];
     for (let i = 0; i < allAccountsInFile.length; i++) { const a = allAccountsInFile[i]; if (!accountIdByNumber[a]) missingAccounts.push(a); }
     if (missingAccounts.length > 0) {
+        console.log('[import] contas faltantes', missingAccounts.length);
         const toCreate = missingAccounts.map(function(acc){ return {
             user_id: currentUser.id,
             account: acc,
@@ -132,14 +148,18 @@ async function processCSV(csv) {
             platform: ''
         }; });
         try {
+            console.time('[import] accounts_upsert');
             const up = await supabaseClient
                 .from('accounts')
                 .upsert(toCreate, { onConflict: 'account', returning: 'minimal' });
+            console.timeEnd('[import] accounts_upsert');
             if (up && up.error) { tracker.other++; tracker.details.push({ line: null, type: 'account_create_error', message: up.error.message }); }
         } catch(e){ tracker.other++; tracker.details.push({ line: null, type: 'account_create_error', message: e && e.message ? e.message : 'Falha ao criar contas' }); }
         await new Promise(function(res){ setTimeout(res, 1000); });
         try {
+            console.time('[import] accounts_refetch');
             const accRes2 = await supabaseClient.from('accounts').select('id,account').eq('user_id', currentUser.id);
+            console.timeEnd('[import] accounts_refetch');
             const accRows2 = accRes2.data || [];
             for (let i = 0; i < accRows2.length; i++) { accountIdByNumber[String(accRows2[i].account || '')] = accRows2[i].id; }
         } catch(e){}
@@ -150,14 +170,18 @@ async function processCSV(csv) {
         if (!r.account_id) { tracker.other++; tracker.details.push({ line: null, type: 'account_missing_after_create', message: 'Conta não cadastrada após criação: ' + String(r.account_number || '') }); continue; }
         batch.push({ user_id: r.user_id, instrument: r.instrument, action: r.action, quantity: r.quantity, price: r.price, time: r.time, e_x: r.e_x, position: r.position, commission: r.commission, account_id: r.account_id, source_id: r.source_id });
         if (batch.length >= batchSize) {
+            console.time('[import] insert_batch');
             const result = await dedupAndInsertBatch(batch);
+            console.timeEnd('[import] insert_batch');
             imported += result.inserted; duplicates += result.duplicates; errors += result.errors;
             if (result.errorDetails && result.errorDetails.length > 0) { for (let k = 0; k < result.errorDetails.length; k++) tracker.details.push(result.errorDetails[k]); tracker.insert += result.errors; }
             batch = [];
         }
     }
     if (batch.length > 0) {
+        console.time('[import] insert_final_batch');
         const result = await dedupAndInsertBatch(batch);
+        console.timeEnd('[import] insert_final_batch');
         imported += result.inserted; duplicates += result.duplicates; errors += result.errors;
         if (result.errorDetails && result.errorDetails.length > 0) { for (let k = 0; k < result.errorDetails.length; k++) tracker.details.push(result.errorDetails[k]); tracker.insert += result.errors; }
     }
@@ -176,7 +200,11 @@ async function processCSV(csv) {
         '<div id="uploadErrorsPanel" style="display:none; margin-top:10px; background: #1f2937; color:#e5e7eb; padding:10px; border-radius:4px; max-height:280px; overflow:auto;"></div>';
     document.getElementById('uploadMessage').innerHTML = statusHtml;
     setUploadErrorsDownloadLink(tracker);
-    try { await consolidateTradesForUserBatch(); } catch (e) {}
+    try {
+        console.time('[import] consolidate_trades');
+        await consolidateTradesForUserBatch();
+        console.timeEnd('[import] consolidate_trades');
+    } catch (e) { console.error('[import] consolidate_trades error', e && e.message ? e.message : e); }
     await loadDataFromSupabase();
 }
 
