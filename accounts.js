@@ -72,7 +72,11 @@ async function submitCreateAccount(){
 }
 
 async function loadAccounts(){
-  if (!supabaseClient || !currentUser) return;
+  if (!supabaseClient) return;
+  if (!currentUser) {
+    try { const r = await supabaseClient.auth.getUser(); if (r && r.data && r.data.user) { currentUser = r.data.user; } } catch(e){}
+    if (!currentUser) return;
+  }
   var msg = document.getElementById('accountsMessage');
   if (msg) { msg.textContent = 'Carregando...'; msg.className = 'loading'; }
   var res = await supabaseClient.from('accounts').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
