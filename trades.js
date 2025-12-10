@@ -3,10 +3,14 @@ async function loadDataFromSupabase() {
         const accRes = await supabaseClient.from('accounts').select('id,account').eq('user_id', currentUser.id);
         const accRows = accRes.data || [];
         const accountNumberById = {}; for (let i = 0; i < accRows.length; i++) { accountNumberById[String(accRows[i].id)] = accRows[i].account || ''; }
-        const result = await supabaseClient.from('trades').select('id,user_id,instrument,account_id,type,status,avg_price_entry,avg_price_exit,pnl_points,pnl_dollars,start_time,end_time,strategy_id').eq('user_id', currentUser.id).order('end_time');
-        const trades = result.data;
+        let trades = [];
+        let result = await supabaseClient.from('trades').select('id,user_id,instrument,account_id,type,status,avg_price_entry,avg_price_exit,pnl_points,pnl_dollars,pnl_dollars_net,pnl_dollars_gross,start_time,end_time,strategy_id').eq('user_id', currentUser.id).order('end_time');
+        if (result.error) {
+            result = await supabaseClient.from('trades').select('id,user_id,instrument,account_id,type,status,avg_price_entry,avg_price_exit,pnl_points,pnl_dollars,start_time,end_time,strategy_id').eq('user_id', currentUser.id).order('end_time');
+        }
+        trades = result.data;
         if (trades && trades.length > 0) {
-            allTrades = trades.map(function(t){ var accName = accountNumberById[String(t.account_id)] || ''; return { id: t.id, instrument: t.instrument, accountId: t.account_id, account: accName, type: t.type, status: t.status, avgEntry: t.avg_price_entry != null ? parseFloat(t.avg_price_entry).toFixed(2) : '-', avgExit: t.avg_price_exit != null ? parseFloat(t.avg_price_exit).toFixed(2) : '-', pnlPoints: t.pnl_points != null ? parseFloat(t.pnl_points).toFixed(2) : '-', pnlDollars: t.pnl_dollars != null ? parseFloat(t.pnl_dollars).toFixed(2) : '-', startTime: t.start_time, endTime: t.end_time, strategy_id: t.strategy_id || null, entries: [], exits: [] }; });
+            allTrades = trades.map(function(t){ var accName = accountNumberById[String(t.account_id)] || ''; var pnlNet = (typeof t.pnl_dollars_net !== 'undefined' && t.pnl_dollars_net != null) ? parseFloat(t.pnl_dollars_net).toFixed(2) : (t.pnl_dollars != null ? parseFloat(t.pnl_dollars).toFixed(2) : '-'); return { id: t.id, instrument: t.instrument, accountId: t.account_id, account: accName, type: t.type, status: t.status, avgEntry: t.avg_price_entry != null ? parseFloat(t.avg_price_entry).toFixed(2) : '-', avgExit: t.avg_price_exit != null ? parseFloat(t.avg_price_exit).toFixed(2) : '-', pnlPoints: t.pnl_points != null ? parseFloat(t.pnl_points).toFixed(2) : '-', pnlDollars: pnlNet, startTime: t.start_time, endTime: t.end_time, strategy_id: t.strategy_id || null, entries: [], exits: [] }; });
             populateAccountFilter();
             populateStrategyFilter();
             populateInstrumentFilter();
@@ -164,7 +168,8 @@ async function consolidateTradesForUser() {
                         const instrumentCode = (tradeOpen.instrument || '').substring(0, 3);
                         const multipliers = { 'NQ': 20, 'MNQ': 2, 'GC': 100, 'MGC': 10 };
                         const mult = multipliers[instrumentCode] || 10;
-                        const pnlDollars = (pointsDiff * entryQty * mult) - totalComm;
+                        const pnlGross = (pointsDiff * entryQty * mult);
+                        const pnlDollars = pnlGross - totalComm;
                         tradeOpen.status = 'Closed';
                         const startIso = new Date(tradeOpen.startTime).toISOString();
                         const endIso = new Date(op.time).toISOString();
@@ -184,7 +189,7 @@ async function consolidateTradesForUser() {
                         } else {
                             const ins = await supabaseClient
                                 .from('trades')
-                                .insert([{ user_id: currentUser.id, instrument: tradeOpen.instrument, account_id: tradeOpen.account_id, type: tradeOpen.type, start_time: startIso, end_time: endIso, status: 'Closed', avg_price_entry: avgEntry, avg_price_exit: avgExit, total_qty_entry: entryQty, total_qty_exit: exitQty, pnl_points: (pointsDiff * entryQty), pnl_dollars: pnlDollars, total_commissions: totalComm }])
+                                .insert([{ user_id: currentUser.id, instrument: tradeOpen.instrument, account_id: tradeOpen.account_id, type: tradeOpen.type, start_time: startIso, end_time: endIso, status: 'Closed', avg_price_entry: avgEntry, avg_price_exit: avgExit, total_qty_entry: entryQty, total_qty_exit: exitQty, pnl_points: (pointsDiff * entryQty), pnl_dollars: pnlDollars, total_commissions: totalComm, pnl_dollars_gross: pnlGross, pnl_dollars_net: pnlDollars }])
                                 .select('id')
                                 .single();
                             if (ins.data) tradeId = ins.data.id;
@@ -277,19 +282,20 @@ async function consolidateTradesForUserBatch() {
                         const avgExit = avgExitNumerator / (exitQty || 1);
                         const side = tradeOpen.type === 'LONG' ? 1 : -1;
                         const pointsDiff = (avgExit - avgEntry) * side;
-                        let totalComm = 0; for (let j = 0; j < tradeOpen.entries.length; j++) { totalComm += parseFloat(tradeOpen.entries[j].commission || 0); } for (let j = 0; j < tradeOpen.exits.length; j++) { totalComm += parseFloat(tradeOpen.exits[j].commission || 0); }
-                        const instrumentCode = (tradeOpen.instrument || '').substring(0, 3);
-                        const multipliers = { 'NQ': 20, 'MNQ': 2, 'GC': 100, 'MGC': 10 };
-                        const mult = multipliers[instrumentCode] || 10;
-                        const pnlDollars = (pointsDiff * entryQty * mult) - totalComm;
-                        const startIso = normalizeTimeKey(tradeOpen.startTime);
-                        const endIso = normalizeTimeKey(op.time);
-                        candidates.push({ instrument: tradeOpen.instrument, account_id: tradeOpen.account_id, type: tradeOpen.type, start_time: startIso, end_time: endIso, status: 'Closed', avg_price_entry: avgEntry, avg_price_exit: avgExit, total_qty_entry: entryQty, total_qty_exit: exitQty, pnl_points: (pointsDiff * entryQty), pnl_dollars: pnlDollars, total_commissions: totalComm, opIds: tradeOpen.entries.concat(tradeOpen.exits).map(function(o){ return o.id; }), opSourceIds: tradeOpen.entries.concat(tradeOpen.exits).map(function(o){ return o.source_id || null; }).filter(function(v){ return v; }) });
-                        tradeOpen = null;
-                    }
+                    let totalComm = 0; for (let j = 0; j < tradeOpen.entries.length; j++) { totalComm += parseFloat(tradeOpen.entries[j].commission || 0); } for (let j = 0; j < tradeOpen.exits.length; j++) { totalComm += parseFloat(tradeOpen.exits[j].commission || 0); }
+                    const instrumentCode = (tradeOpen.instrument || '').substring(0, 3);
+                    const multipliers = { 'NQ': 20, 'MNQ': 2, 'GC': 100, 'MGC': 10 };
+                    const mult = multipliers[instrumentCode] || 10;
+                    const pnlGross = (pointsDiff * entryQty * mult);
+                    const pnlDollars = pnlGross - totalComm;
+                    const startIso = normalizeTimeKey(tradeOpen.startTime);
+                    const endIso = normalizeTimeKey(op.time);
+                    candidates.push({ instrument: tradeOpen.instrument, account_id: tradeOpen.account_id, type: tradeOpen.type, start_time: startIso, end_time: endIso, status: 'Closed', avg_price_entry: avgEntry, avg_price_exit: avgExit, total_qty_entry: entryQty, total_qty_exit: exitQty, pnl_points: (pointsDiff * entryQty), pnl_dollars: pnlDollars, total_commissions: totalComm, pnl_dollars_gross: pnlGross, pnl_dollars_net: pnlDollars, opIds: tradeOpen.entries.concat(tradeOpen.exits).map(function(o){ return o.id; }), opSourceIds: tradeOpen.entries.concat(tradeOpen.exits).map(function(o){ return o.source_id || null; }).filter(function(v){ return v; }) });
+                    tradeOpen = null;
                 }
             }
         }
+    }
     }
     console.log('[consolidateTradesForUserBatch] candidates', candidates.length);
     if (candidates.length === 0) { console.warn('[consolidateTradesForUserBatch] no trade candidates'); return; }
@@ -347,7 +353,10 @@ async function consolidateTradesForUserBatch() {
         else {
             if (keysForInsertSet[key]) { seqAssignments.push({ seq: existingMap[key + '|seq'], opIds: candidates[i].opIds || [], instrument: candidates[i].instrument, account_id: candidates[i].account_id, start_time: candidates[i].start_time, end_time: candidates[i].end_time }); continue; }
             const seq = nextSeq++;
-            toInsert.push({ user_id: currentUser.id, instrument: candidates[i].instrument, account_id: candidates[i].account_id, type: candidates[i].type, start_time: candidates[i].start_time, end_time: candidates[i].end_time, status: candidates[i].status, avg_price_entry: candidates[i].avg_price_entry, avg_price_exit: candidates[i].avg_price_exit, total_qty_entry: candidates[i].total_qty_entry, total_qty_exit: candidates[i].total_qty_exit, pnl_points: candidates[i].pnl_points, pnl_dollars: candidates[i].pnl_dollars, total_commissions: candidates[i].total_commissions, trades_seq: seq });
+            const row = { user_id: currentUser.id, instrument: candidates[i].instrument, account_id: candidates[i].account_id, type: candidates[i].type, start_time: candidates[i].start_time, end_time: candidates[i].end_time, status: candidates[i].status, avg_price_entry: candidates[i].avg_price_entry, avg_price_exit: candidates[i].avg_price_exit, total_qty_entry: candidates[i].total_qty_entry, total_qty_exit: candidates[i].total_qty_exit, pnl_points: candidates[i].pnl_points, pnl_dollars: candidates[i].pnl_dollars, total_commissions: candidates[i].total_commissions, trades_seq: seq };
+            if (hasGrossCol) row.pnl_dollars_gross = candidates[i].pnl_dollars_gross;
+            if (hasNetCol) row.pnl_dollars_net = candidates[i].pnl_dollars_net;
+            toInsert.push(row);
             keysForInsert.push(key);
             keysForInsertSet[key] = true;
             existingMap[key + '|seq'] = seq;
@@ -504,3 +513,8 @@ function toggleSelectAllTrades(el) {
     }
     if (typeof updateSelectionUI === 'function') { updateSelectionUI(); }
 }
+    let hasNetCol = false; let hasGrossCol = false;
+    try {
+        const tProbe = await supabaseClient.from('trades').select('pnl_dollars_net,pnl_dollars_gross').eq('user_id', currentUser.id).limit(1);
+        if (!tProbe.error) { hasNetCol = true; hasGrossCol = true; }
+    } catch (e) {}
