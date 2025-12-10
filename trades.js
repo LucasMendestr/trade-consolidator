@@ -221,6 +221,11 @@ async function consolidateTradesForUserBatch() {
         .order('time');
     const operations = opsRes.data || [];
     console.log('[consolidateTradesForUserBatch] operations count', operations.length, opsRes.error ? { error: opsRes.error.message } : {});
+    let hasNetCol = false; let hasGrossCol = false;
+    try {
+        const tProbe = await supabaseClient.from('trades').select('pnl_dollars_net,pnl_dollars_gross').eq('user_id', currentUser.id).limit(1);
+        if (!tProbe.error) { hasNetCol = true; hasGrossCol = true; }
+    } catch (e) {}
     if (!operations || operations.length === 0) { console.warn('[consolidateTradesForUserBatch] no operations to consolidate'); return; }
     function parseTimeToMillis(s) {
         if (!s) return NaN;
@@ -295,7 +300,6 @@ async function consolidateTradesForUserBatch() {
                 }
             }
         }
-    }
     }
     console.log('[consolidateTradesForUserBatch] candidates', candidates.length);
     if (candidates.length === 0) { console.warn('[consolidateTradesForUserBatch] no trade candidates'); return; }
@@ -472,6 +476,7 @@ async function consolidateTradesForUserBatch() {
     window.lastTradeErrors = { summary: { inserted: insertedCount, duplicates: (candidates.length - insertedCount), opsUpdated: opsUpdatedTotal, requested: linkedOps, byIds: opsUpdatedByIds, bySource: opsUpdatedBySource, byRange: opsUpdatedByRange }, details: linkLogs };
     setTradeErrorsDownloadLink(window.lastTradeErrors);
 }
+}
 
 function toggleTradeErrors() {
     const panel = document.getElementById('tradeErrorsPanel');
@@ -513,8 +518,3 @@ function toggleSelectAllTrades(el) {
     }
     if (typeof updateSelectionUI === 'function') { updateSelectionUI(); }
 }
-    let hasNetCol = false; let hasGrossCol = false;
-    try {
-        const tProbe = await supabaseClient.from('trades').select('pnl_dollars_net,pnl_dollars_gross').eq('user_id', currentUser.id).limit(1);
-        if (!tProbe.error) { hasNetCol = true; hasGrossCol = true; }
-    } catch (e) {}
