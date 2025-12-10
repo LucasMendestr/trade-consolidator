@@ -169,16 +169,6 @@
                     <input id="commissionPerContract" type="text" inputmode="decimal" autocomplete="off" placeholder="0,00" aria-required="true" aria-invalid="false" style="padding:10px; border:2px solid #22d3ee; border-radius:6px; background:#0b1020; color:#e5e7eb;" oninput="maskMoney(this); validateCommission(this)" />
                     <div id="commissionError" style="display:none; color:#ef4444; font-size:12px;">Informe um valor numérico positivo</div>
                 </div>
-            </div>
-            <div>
-                <div style="display:grid; grid-template-columns: 1fr; gap:10px; margin-bottom:10px;">
-                    <label for="commissionPerContract" style="font-weight:600; display:flex; align-items:center; gap:8px;">
-                        Valor da Comissão por Contrato
-                        <span title="Comissão por operação = valor informado × quantidade de contratos" style="cursor:help; color:#9ca3af;">❓</span>
-                    </label>
-                    <input id="commissionPerContract" type="text" inputmode="decimal" autocomplete="off" placeholder="0,00" aria-required="true" aria-invalid="false" style="padding:10px; border:2px solid #22d3ee; border-radius:6px; background:#0b1020; color:#e5e7eb;" oninput="maskMoney(this); validateCommission(this)" />
-                    <div id="commissionError" style="display:none; color:#ef4444; font-size:12px;">Informe um valor numérico positivo</div>
-                </div>
                 <input type="file" id="csvFileModal" accept=".csv" style="display:none" onchange="handleFileUpload(event)">
                 <button class="btn btn-primary" onclick="document.getElementById('csvFileModal').click()">Selecionar arquivo CSV</button>
                 <div id="uploadMessage" style="margin-top:8px;"></div>

@@ -247,7 +247,7 @@ body.sidebar-collapsed { --sidebar-w: 64px; }
 .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; }
 .modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; }
 .modal.open, .modal-backdrop.open { display: flex; }
-.modal-card { background: var(--card-bg); color: var(--text); padding: 20px; border-radius: var(--radius); width: 520px; max-width: 95vw; box-shadow: var(--shadow); border: 1px solid var(--grid); }
+.modal-card { background: var(--card-bg); color: var(--text); padding: 20px; border-radius: var(--radius); width: 760px; max-width: 98vw; max-height: 85vh; overflow-y: auto; box-shadow: var(--shadow); border: 1px solid var(--grid); }
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
 
