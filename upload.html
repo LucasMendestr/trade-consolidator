@@ -36,10 +36,23 @@
                 <p>📁 Clique para selecionar arquivo CSV</p>
                 <p style="font-size: 12px; color: #999;">NinjaTrader Export</p>
             </div>
+            <div style="margin:12px 0; display:grid; grid-template-columns: 1fr; gap:8px;">
+                <label for="commissionPerContract" style="font-weight:bold; display:flex; align-items:center; gap:8px;">
+                    Valor da Comissão por Contrato
+                    <span title="Comissão por operação = valor informado × quantidade de contratos" style="cursor:help; color:#9ca3af;">❓</span>
+                </label>
+                <input id="commissionPerContract" type="text" inputmode="decimal" autocomplete="off" placeholder="0,00" aria-required="true" aria-invalid="false" style="padding:10px; border:2px solid var(--primary); border-radius:6px; background: var(--surface); color: var(--text);" oninput="maskMoney(this); validateCommission(this)">
+                <div id="commissionError" style="display:none; color:#ef4444; font-size:12px;">Informe um valor numérico positivo</div>
+            </div>
             <input type="file" id="csvFile" accept=".csv" onchange="handleFileUpload(event)" style="display: none;">
             <div id="uploadMessage"></div>
         </div>
     </div>
+    <script>
+    function maskMoney(el){ try { var v = String(el.value || '').replace(/[^0-9]/g,''); if (v.length === 0) { el.value = ''; return; } var int = v.slice(0, -2); var dec = v.slice(-2); if (int.length === 0) int = '0'; var intFmt = int.replace(/\B(?=(\d{3})+(?!\d))/g, '.'); el.value = intFmt + ',' + dec; } catch(e){} }
+    function parseMoney(el){ var s = String(el && el.value || '').trim(); if (!s) return NaN; return parseFloat(s.replace(/\./g,'').replace(',', '.')); }
+    function validateCommission(el){ var v = parseMoney(el); var err = document.getElementById('commissionError'); var invalid = isNaN(v) || v < 0; if (err) err.style.display = invalid ? 'block' : 'none'; el.setAttribute('aria-invalid', invalid ? 'true' : 'false'); }
+    </script>
     <script src="globals.js"></script>
     <script src="supabase-init.js"></script>
     <script src="theme.js"></script>

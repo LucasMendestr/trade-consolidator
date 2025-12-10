@@ -161,6 +161,14 @@
         <div class="modal-card">
             <div class="modal-header"><strong>📤 Importar CSV</strong><button class="close-btn" onclick="closeUploadModal()">✕</button></div>
             <div>
+                <div style="display:grid; grid-template-columns: 1fr; gap:10px; margin-bottom:10px;">
+                    <label for="commissionPerContract" style="font-weight:600; display:flex; align-items:center; gap:8px;">
+                        Valor da Comissão por Contrato
+                        <span title="Comissão por operação = valor informado × quantidade de contratos" style="cursor:help; color:#9ca3af;">❓</span>
+                    </label>
+                    <input id="commissionPerContract" type="text" inputmode="decimal" autocomplete="off" placeholder="0,00" aria-required="true" aria-invalid="false" style="padding:10px; border:2px solid #22d3ee; border-radius:6px; background:#0b1020; color:#e5e7eb;" oninput="maskMoney(this); validateCommission(this)" />
+                    <div id="commissionError" style="display:none; color:#ef4444; font-size:12px;">Informe um valor numérico positivo</div>
+                </div>
                 <input type="file" id="csvFileModal" accept=".csv" style="display:none" onchange="handleFileUpload(event)">
                 <button class="btn btn-primary" onclick="document.getElementById('csvFileModal').click()">Selecionar arquivo CSV</button>
                 <div id="uploadMessage" style="margin-top:8px;"></div>
@@ -185,6 +193,9 @@
     function toggleDatePanel(ev){ ev && ev.stopPropagation(); var p = document.getElementById('datePanel'); if (p) { p.classList.toggle('open'); } }
     function setPreset(p){ var dp = document.getElementById('datePreset'); var df = document.getElementById('dateFrom'); var dt = document.getElementById('dateTo'); if (dp && df && dt) { dp.value = p; df.value = ''; dt.value = ''; filterTrades(); } }
     function clearFilters(){ try { var af=document.getElementById('accountFilter'); var sf=document.getElementById('strategyFilter'); var inf=document.getElementById('instrumentFilter'); var dp=document.getElementById('datePreset'); var df=document.getElementById('dateFrom'); var dt=document.getElementById('dateTo'); var dri=document.getElementById('dateRangeInput'); if(af) af.value=''; if(sf) sf.value=''; if(inf) inf.value=''; if(dp) dp.value=''; if(df) df.value=''; if(dt) dt.value=''; if(dri) dri.value=''; } catch(e){} filterTrades(); }
+    function maskMoney(el){ try { var v = String(el.value || '').replace(/[^0-9]/g,''); if (v.length === 0) { el.value = ''; return; } var int = v.slice(0, -2); var dec = v.slice(-2); if (int.length === 0) int = '0'; var intFmt = int.replace(/\B(?=(\d{3})+(?!\d))/g, '.'); el.value = intFmt + ',' + dec; } catch(e){} }
+    function parseMoney(el){ var s = String(el && el.value || '').trim(); if (!s) return NaN; return parseFloat(s.replace(/\./g,'').replace(',', '.')); }
+    function validateCommission(el){ var v = parseMoney(el); var err = document.getElementById('commissionError'); var invalid = isNaN(v) || v < 0; if (err) err.style.display = invalid ? 'block' : 'none'; el.setAttribute('aria-invalid', invalid ? 'true' : 'false'); }
     function updateStickyOffsets(){ try { var h = document.querySelector('.app-header'); var d = document.getElementById('tradeDetails'); var hh = h ? h.offsetHeight : 0; var dv = (d && d.style.display !== 'none') ? d.offsetHeight : 0; document.documentElement.style.setProperty('--sticky-details-top', hh + 'px'); document.documentElement.style.setProperty('--sticky-table-top', (hh + dv) + 'px'); } catch(e){} }
     window.addEventListener('load', updateStickyOffsets);
     window.addEventListener('resize', updateStickyOffsets);

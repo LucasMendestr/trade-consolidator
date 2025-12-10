@@ -1,9 +1,24 @@
+function readCommissionUnit() {
+    try {
+        const el = document.getElementById('commissionPerContract');
+        if (!el) return NaN;
+        const s = String(el.value || '').trim();
+        if (!s) return NaN;
+        return parseFloat(s.replace(/\./g,'').replace(',', '.'));
+    } catch (e) { return NaN; }
+}
+function round2(n){ return Math.round(n * 100) / 100; }
+
 async function handleFileUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
+    const unit = readCommissionUnit();
+    const msgEl = document.getElementById('uploadMessage');
+    if (isNaN(unit) || unit < 0) { if (msgEl) { msgEl.innerHTML = '<div class="error">❌ Informe o campo "Valor da Comissão por Contrato" corretamente</div>'; } return; }
+    if (msgEl) { msgEl.innerHTML = '<div class="info">ℹ️ Comissão por contrato aplicada: R$ ' + unit.toFixed(2).replace('.', ',') + '</div>'; }
     const reader = new FileReader();
     reader.onload = async function(e) {
-        try { await processCSV(e.target.result); }
+        try { await processCSV(e.target.result, unit); }
         catch (err) {
             const el = document.getElementById('uploadMessage');
             if (el) { el.textContent = 'Erro: ' + (err && err.message ? err.message : 'Falha ao processar arquivo'); el.className = 'error'; }
@@ -67,12 +82,13 @@ function toIsoUTC(s) {
     return null;
 }
 
-async function processCSV(csv) {
+async function processCSV(csv, commissionUnit) {
     const lines = csv.split(/\r?\n/);
     const headers = lines[0].split(';').map(function(h) { return h.trim(); });
     let imported = 0; let errors = 0; let duplicates = 0;
     const batchSize = 500; let batch = [];
     const tracker = { parse: 0, validation: 0, normalize: 0, time: 0, insert: 0, other: 0, details: [] };
+    tracker.details.push({ line: null, type: 'commission_unit', message: 'Comissão unitária aplicada: ' + (isNaN(commissionUnit) ? 'N/A' : commissionUnit.toFixed(2)) });
     const seenAccounts = {};
     const accountIdByNumber = {};
     const rawRows = [];
@@ -93,7 +109,7 @@ async function processCSV(csv) {
             if (missing.length > 0) { tracker.validation++; tracker.details.push({ line: i, type: 'validation', message: 'Campos ausentes: ' + missing.join(','), raw: raw }); continue; }
             const qty = normalizeNumber(op.Quantity);
             const prc = normalizeNumber(op.Price);
-            let com = normalizeNumber((op.Commission || '0').replace('$',''));
+            let com = isNaN(commissionUnit) ? normalizeNumber((op.Commission || '0').replace('$','')) : round2(parseFloat(qty || 0) * parseFloat(commissionUnit));
             if (isNaN(qty)) { tracker.normalize++; tracker.details.push({ line: i, type: 'normalize', message: 'Quantidade inválida: ' + op.Quantity, raw: raw }); continue; }
             if (isNaN(prc)) { tracker.normalize++; tracker.details.push({ line: i, type: 'normalize', message: 'Preço inválido: ' + op.Price, raw: raw }); continue; }
             if (isNaN(com)) { tracker.normalize++; tracker.details.push({ line: i, type: 'normalize', message: 'Comissão inválida: ' + op.Commission, raw: raw }); continue; }
