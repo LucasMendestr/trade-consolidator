@@ -283,36 +283,36 @@ async function consolidateTradesForUserBatch() {
     }
     console.log('[consolidateTradesForUserBatch] candidates', candidates.length);
     if (candidates.length === 0) { console.warn('[consolidateTradesForUserBatch] no trade candidates'); return; }
-    const instrumentsSet = {}; const accountsSet = {}; let minTime = null; let maxTime = null;
+    const instrumentsSet = {}; const accountIdsSet = {}; let minTime = null; let maxTime = null;
     for (let i = 0; i < candidates.length; i++) {
         const c = candidates[i];
         if (c.instrument) instrumentsSet[c.instrument] = true;
-        if (c.account) accountsSet[c.account] = true;
+        if (c.account_id) accountIdsSet[String(c.account_id)] = true;
         const s = new Date(c.start_time).getTime(); const e = new Date(c.end_time).getTime();
         if (minTime === null || s < minTime) minTime = s; if (minTime === null || e < minTime) minTime = e;
         if (maxTime === null || s > maxTime) maxTime = s; if (maxTime === null || e > maxTime) maxTime = e;
     }
     const instruments = Object.keys(instrumentsSet);
-    const accounts = Object.keys(accountsSet);
+    const accountIds = Object.keys(accountIdsSet);
     const minIso = new Date(minTime).toISOString();
     const maxIso = new Date(maxTime).toISOString();
     console.log('[consolidateTradesForUserBatch] search range', { instrumentsCount: instruments.length, accountsCount: accounts.length, minIso, maxIso });
-    function kTrade(x) { return (x.instrument || '') + '|' + (x.account || '') + '|' + (x.type || '') + '|' + (x.start_time || '') + '|' + (x.end_time || ''); }
+    function kTrade(x) { return (x.instrument || '') + '|' + String(x.account_id || '') + '|' + (x.type || '') + '|' + (x.start_time || '') + '|' + (x.end_time || ''); }
     const existingMap = {};
     const tradeIdBySeq = {};
     if (instruments.length > 0) {
         const sel = await supabaseClient
             .from('trades')
-            .select('id,instrument,account,type,start_time,end_time,trades_seq')
+            .select('id,instrument,account_id,type,start_time,end_time,trades_seq')
             .eq('user_id', currentUser.id)
             .in('instrument', instruments)
-            .in('account', accounts)
+            .in('account_id', accountIds)
             .gte('start_time', minIso)
             .lte('end_time', maxIso);
         const existing = sel.data || [];
         for (let i = 0; i < existing.length; i++) {
             const x = existing[i];
-            const k = (x.instrument || '') + '|' + (x.account || '') + '|' + (x.type || '') + '|' + (x.start_time || '') + '|' + (x.end_time || '');
+            const k = (x.instrument || '') + '|' + String(x.account_id || '') + '|' + (x.type || '') + '|' + (x.start_time || '') + '|' + (x.end_time || '');
             existingMap[k] = x.id;
             existingMap[k + '|seq'] = x.trades_seq;
             if (x.trades_seq != null) tradeIdBySeq[x.trades_seq] = x.id;
