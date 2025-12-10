@@ -194,7 +194,21 @@
     (function(){
         // handled in nav.js
     })();
-    function openUploadModal(){ var m = document.getElementById('uploadModal'); var b = document.getElementById('modalBackdrop'); if (m && b) { m.classList.add('open'); b.classList.add('open'); } }
+    function openUploadModal(){
+        var m = document.getElementById('uploadModal'); var b = document.getElementById('modalBackdrop'); if (m && b) { m.classList.add('open'); b.classList.add('open'); }
+        try {
+            if (!document.getElementById('commissionPerContract')) {
+                var card = m ? m.querySelector('.modal-card') : null;
+                if (card) {
+                    var block = document.createElement('div');
+                    block.innerHTML = '<div style="display:grid; grid-template-columns: 1fr; gap:10px; margin-bottom:10px;"><label for="commissionPerContract" style="font-weight:600; display:flex; align-items:center; gap:8px;">Valor da Comissão por Contrato<span title="Comissão por operação = valor informado × quantidade de contratos" style="cursor:help; color:#9ca3af;">❓</span></label><input id="commissionPerContract" type="text" inputmode="decimal" autocomplete="off" placeholder="0,00" aria-required="true" aria-invalid="false" style="padding:10px; border:2px solid #22d3ee; border-radius:6px; background:#0b1020; color:#e5e7eb;" oninput="maskMoney(this); validateCommission(this)" /><div id="commissionError" style="display:none; color:#ef4444; font-size:12px;">Informe um valor numérico positivo</div></div>';
+                    var header = card.querySelector('.modal-header');
+                    if (header) header.after(block);
+                    else card.prepend(block);
+                }
+            }
+        } catch(e){}
+    }
     function closeUploadModal(){ var m = document.getElementById('uploadModal'); var b = document.getElementById('modalBackdrop'); if (m && b) { m.classList.remove('open'); b.classList.remove('open'); } }
     (function(){
         var fp = flatpickr('#dateRangeInput', { mode: 'range', dateFormat: 'Y-m-d', onChange: function(sel){ if (!sel || sel.length < 2) return; var f = sel[0]; var t = sel[1]; var df = document.getElementById('dateFrom'); var dt = document.getElementById('dateTo'); var dp = document.getElementById('datePreset'); if (df && dt && dp) { dp.value = ''; df.value = fp.formatDate(f, 'Y-m-d'); dt.value = fp.formatDate(t, 'Y-m-d'); filterTrades(); } } });
