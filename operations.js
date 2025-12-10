@@ -127,8 +127,6 @@ async function processCSV(csv) {
             type: 'forex',
             initial_bal: 0,
             investment: 0,
-            withdrawals: 0,
-            profit_loss: 0,
             drawdown: 0,
             rules: '',
             platform: ''

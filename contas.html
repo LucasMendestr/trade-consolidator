@@ -25,11 +25,16 @@
             <table id="accountsTable">
               <thead>
                 <tr>
-                  <th>Ações</th>
-                  <th>Nome da Conta</th>
+                  <th>Prop Firm</th>
+                  <th>Nome da conta</th>
+                  <th>Status</th>
                   <th>Tipo</th>
                   <th>Saldo</th>
-                  <th>Data de Criação</th>
+                  <th>Custo</th>
+                  <th>Saques</th>
+                  <th>Resultado</th>
+                  <th>Vencimento</th>
+                  <th>Ações</th>
                 </tr>
               </thead>
               <tbody id="accountsBody">
@@ -69,9 +74,8 @@
           </div>
           <div class="form-group"><label>Saldo Inicial</label><input type="number" id="initialBal" step="0.01" placeholder="0.00"></div>
           <div class="form-group"><label>Investimento (custo de aquisição)</label><input type="number" id="investment" step="0.01" placeholder="0.00"></div>
-          <div class="form-group"><label>Withdrawals</label><input type="number" id="withdrawals" step="0.01" placeholder="0.00"></div>
-          <div class="form-group"><label>Profit/Loss</label><input type="number" id="profitLoss" step="0.01" placeholder="0.00"></div>
           <div class="form-group"><label>Drawdown</label><input type="number" id="drawdown" step="0.01" placeholder="0.00"></div>
+          <div class="form-group"><label>Vencimento</label><input type="date" id="dueDate"></div>
           <div class="form-group" style="grid-column: span 2;"><label>Rules</label><input type="text" id="rules" placeholder="Regras"></div>
           <div class="form-group" style="grid-column: span 2;"><label>Platform</label><input type="text" id="platform" placeholder="Ex: NinjaTrader"></div>
         </div>

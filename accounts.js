@@ -1,10 +1,7 @@
 let allAccounts = [];
 
 function computeBalance(acc){
-  var ib = parseFloat(acc.initial_bal || 0) || 0;
-  var pl = parseFloat(acc.profit_loss || 0) || 0;
-  var wd = parseFloat(acc.withdrawals || 0) || 0;
-  return ib + pl - wd;
+  return null;
 }
 
 function formatMoney(v){ var n = parseFloat(v || 0) || 0; return (n < 0 ? '-' : '') + '$' + Math.abs(n).toFixed(2); }
@@ -48,9 +45,8 @@ async function submitCreateAccount(){
       type: (document.getElementById('accountType').value || '').trim(),
       initial_bal: parseFloat(document.getElementById('initialBal').value || '0') || 0,
       investment: parseFloat(document.getElementById('investment').value || '0') || 0,
-      withdrawals: parseFloat(document.getElementById('withdrawals').value || '0') || 0,
-      profit_loss: parseFloat(document.getElementById('profitLoss').value || '0') || 0,
       drawdown: parseFloat(document.getElementById('drawdown').value || '0') || 0,
+      due_date: (document.getElementById('dueDate').value || '') || null,
       rules: (document.getElementById('rules').value || '').trim(),
       platform: (document.getElementById('platform').value || '').trim()
     };
@@ -89,21 +85,25 @@ async function loadAccounts(){
 function renderAccountsTable(){
   var body = document.getElementById('accountsBody');
   if (!body) return;
-  if (!allAccounts.length) { body.innerHTML = '<tr><td colspan="5" class="loading">Nenhuma conta</td></tr>'; return; }
+  if (!allAccounts.length) { body.innerHTML = '<tr><td colspan="10" class="loading">Nenhuma conta</td></tr>'; return; }
   function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   var html = '';
   for (var i=0;i<allAccounts.length;i++){
     var a = allAccounts[i];
-    var saldo = computeBalance(a);
     html += '<tr>' +
+      '<td>' + escapeHtml(a.prop_firm_name || '-') + '</td>' +
+      '<td>' + escapeHtml(a.account || '-') + '</td>' +
+      '<td>' + escapeHtml(a.status || '-') + '</td>' +
+      '<td>' + escapeHtml(String(a.type || '-').toUpperCase()) + '</td>' +
+      '<td>' + '-' + '</td>' +
+      '<td>' + formatMoney(a.investment || 0) + '</td>' +
+      '<td>' + '-' + '</td>' +
+      '<td>' + '-' + '</td>' +
+      '<td>' + escapeHtml(a.due_date ? formatDateIso(a.due_date) : '-') + '</td>' +
       '<td>' +
         '<button class="btn btn-secondary" onclick="openEditAccount(\'' + escapeHtml(a.id) + '\')">Editar</button> ' +
         '<button class="btn btn-danger" onclick="deleteAccount(\'' + escapeHtml(a.id) + '\')">Excluir</button>' +
       '</td>' +
-      '<td>' + escapeHtml(a.prop_firm_name || a.account || '-') + '</td>' +
-      '<td>' + escapeHtml(String(a.type || '-').toUpperCase()) + '</td>' +
-      '<td>' + formatMoney(saldo) + '</td>' +
-      '<td>' + escapeHtml(formatDateIso(a.created_at)) + '</td>' +
     '</tr>';
   }
   body.innerHTML = html;
@@ -119,9 +119,8 @@ function openEditAccount(id){
   document.getElementById('accountType').value = a.type || '';
   document.getElementById('initialBal').value = String(a.initial_bal || 0);
   document.getElementById('investment').value = String(a.investment || 0);
-  document.getElementById('withdrawals').value = String(a.withdrawals || 0);
-  document.getElementById('profitLoss').value = String(a.profit_loss || 0);
   document.getElementById('drawdown').value = String(a.drawdown || 0);
+  document.getElementById('dueDate').value = a.due_date ? String(a.due_date).substring(0,10) : '';
   document.getElementById('rules').value = a.rules || '';
   document.getElementById('platform').value = a.platform || '';
   var btn=document.getElementById('btnCreateAccount'); if(btn){ btn.textContent='Salvar'; }
